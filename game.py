@@ -4,10 +4,12 @@ money = 0.0
 
 # The first upgrade is the amount of money/step
 # The others autobuy the previous upgrade
+# You can only have 1 upgrade 5 since it is only possible to afford 1 U4
 money_upgrades = [1.0, 0.0, 0.0, 0.0]
 money_upgrades_cost = [10.0, 1000.0, 1e5, 1e9]
-money_upgrades_cost_mult = [2.0, 4.0, 8.0, 16.0] # TODO: Balance cost increase
+money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Last one is a multiplier
 money_upgrades_mult = [1.0, 1.0, 1.0, 1.0]
+money_upgrade_5, money_upgrade_5_cost = False, 1e10
 
 # TODO: Buy feet, shoes, and socks
 # TODO: Inventory
@@ -38,16 +40,37 @@ def step():
     money += money_upgrades[0] * money_upgrades_mult[0]
     for i in range(3):
         buy_upgrade(i, money_upgrades[i+1] * money_upgrades_mult[i+1])
+    if money_upgrade_5: buy_upgrade_4()
 
-def buy_upgrade(i,n=1): # i is the upgrade index, n is the number of upgrades to buy
+def calculate_money_upgrade_cost(i,n):
+    return money_upgrades_cost[i] * n + money_upgrades_cost_increase[i] * (n-1) if i != 3 \
+        else money_upgrades_cost[i] * money_upgrades_cost_increase[i] # Note: for upgrade 4 we assume we only buy it one at a time (that should be true)
+
+def buy_upgrade(i,n=1): # i is the upgrade index (less than 3), n is the number of upgrades to buy
     global money
-    cost = money_upgrades_cost[i]
-    mult = money_upgrades_cost_mult[i]
-    while cost * mult ** (n-1) > money and n>0:
-        n-=1
-    if n==0:return
-    total_cost = cost * mult ** (n-1)
-    money -= total_cost
-    money_upgrades[i] += n
-    money_upgrades_cost[i] = total_cost * mult
+    if i==3: return buy_upgrade_4()
+    if i==4: return buy_upgrade_5()
     
+    while money_upgrades_cost[i] * n > money:
+        n -= 1
+        if n == 0: return False
+        
+    cost = money_upgrades_cost[i] * n
+    money -= cost
+    money_upgrades[i] += n
+    return True
+
+def buy_upgrade_4():
+    global money
+    if money_upgrades_cost[3] > money: return False
+    money -= money_upgrades_cost[3]
+    money_upgrades_cost[3] *= money_upgrades_cost_increase[3]
+    money_upgrades[3] += 1
+    return True
+
+def buy_upgrade_5():
+    global money, money_upgrade_5
+    if money_upgrade_5 or money_upgrade_5_cost > money: return False
+    money -= money_upgrade_5_cost
+    money_upgrade_5 = True
+    return True
