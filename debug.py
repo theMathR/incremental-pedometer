@@ -15,9 +15,6 @@ def fstr(f):
     if snot: return '{:.2g}'.format(f)
     return game.float_to_str(f)
 
-print(game.float_to_str(1))
-print(game.float_to_str(1e151))
-
 def update():
     for i in range(4):
         u[i].set("U"+str(i+1)+": x"+fstr(game.money_upgrades[i])+ ", $"+fstr(game.money_upgrades_cost[i]) + ", *"+fstr(game.money_upgrades_mult[i]))
