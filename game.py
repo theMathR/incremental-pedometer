@@ -1,4 +1,5 @@
 # i'm bad at coding
+import math
 
 money = 0.0
 
@@ -74,3 +75,23 @@ def buy_upgrade_5():
     money -= money_upgrade_5_cost
     money_upgrade_5 = True
     return True
+
+BEGIN = ['M','B','T','Qa','Qi','Sx','Sp','Oc','No']
+UNITS = ['', 'Un', 'Du', 'Tr','Qa','Qi','Sx','Sp','Oc','No']
+DEC = ['','De','Vg','Tg','Qag','Qig','Sxg','Spg','Og','Ng']
+CEN = ['','Ce','De','Te','Qae','Qie','Sxe','Spe','Oe','Ne']
+
+def float_to_str(f):
+    if f < 1e6: return '{:.1f}'.format(f)
+    N = math.floor(math.log10(f)/3)
+    number_part = f / (1000**N)
+    N-=1
+    if f < 1e33: suffix = BEGIN[N-1]
+    else:
+        N_unit = N%10
+        N_deci = N%100-N_unit
+        N_cent = N-N_unit-N_deci
+        N_deci//=10
+        N_cent//=100
+        suffix = UNITS[N_unit] + DEC[N_deci] + CEN[N_cent]
+    return '{:.1f} {}'.format(number_part, suffix)
