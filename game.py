@@ -1,5 +1,5 @@
 # i'm bad at coding
-import math
+import math, random
 
 money = 0.0
 
@@ -12,20 +12,46 @@ money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds
 money_upgrades_mult = [1.0, 1.0, 1.0, 1.0] # Multipliers given by the shoes
 money_upgrade_5, money_upgrade_5_cost = False, 1e10 # Separated because there can be only 1
 
-# TODO: Buy feet, shoes, and socks
-# TODO: Inventory
-feet = 0
-shoes_equipped = []
-socks_equipped = []
+class BasicShoe:
+    def __init__(self, level=1):
+        self.level = level
+    
+    @property
+    def name(self): return "Basic shoe"
+    
+    @property
+    def description(self): return "Multiplies money/step by {:.3f}".format(math.log(self.level,100)+1)
+    
+    def apply_effect(self, multiplier=1):
+        money_upgrades_mult[0] *= (1+math.log(self.level,100))*multiplier
 
-# TODO: Shoes and socks effects
-SHOES_FUNCTIONS = [
+class BasicSock:
+    def __init__(self, level=1):
+        self.level = level
+    
+    @property
+    def name(self): return "Basic shoe"
+    
+    @property
+    def description(self): return "Boost shoe depending only on level (x{:.3f})".format(math.log(self.level,1000)+1)
+    
+    @property
+    def boost(self):
+        return 1+math.log(self.level,1000)
 
-]
+# Shoes and socks owned
+shoes = [BasicShoe(10)]
+socks = [BasicSock(12)]
 
-SOCKS_FUNCTIONS = [
+feet = 1
+# Contain index numbers to the shoes/socks in the previous lists
+shoes_equipped = [0]
+socks_equipped = [0]
 
-]
+# 0: Scientific
+# 1: Standard
+# 2: Mixed scientific (standard < 1e33)
+notation = 2
 
 # TODO: Elements, challenges
 
@@ -35,8 +61,8 @@ def step():
     # Apply shoe effects
     money_upgrades_mult = [1.0, 1.0, 1.0, 1.0] # Multipliers are reset to be recalculated
     for i in range(feet):
-        shoe, sock = shoes_equipped[i], socks_equipped[i]
-        SHOES_FUNCTIONS[shoe[0]](shoe[1], SOCKS_FUNCTIONS[sock[0]](sock[1]))
+        shoe, sock = shoes[shoes_equipped[i]], socks[socks_equipped[i]]
+        shoe.apply_effect(sock.boost)
     
     # Create money based on U1
     money += (1+money_upgrades[0]) * money_upgrades_mult[0]
@@ -77,20 +103,22 @@ def buy_upgrade_5(): # Same
     money_upgrade_5 = True
     return True
 
-# Convert float to tandard notation
+def change_notation():
+    global notation
+    notation = (notation+1)%3
+
+# Convert float to str depending on the notation
 BEGIN = ['M','B','T','Qa','Qi','Sx','Sp','Oc','No']
 UNITS = ['', 'Un', 'Du', 'Tr','Qa','Qi','Sx','Sp','Oc','No']
 DEC = ['','De','Vg','Tg','Qag','Qig','Sxg','Spg','Og','Ng']
 CEN = ['','Ce','De','Te','Qae','Qie','Sxe','Spe','Oe','Ne']
 def float_to_str(f):
     if f < 1e6: return '{:.1f}'.format(f)
+    if notation == 0: return '{:.2g}'.format(f)
     N = math.floor(math.log10(f)/3)
     number_part = f / (1000**N)
     N-=1
     if f < 1e33: suffix = BEGIN[N-1]
-    else:
-        N_unit = N%10
-        N_deci = (N//10)%10
-        N_cent = N//100
-        suffix = UNITS[N_unit] + DEC[N_deci] + CEN[N_cent]
+    elif notation == 2: return '{:.2g}'.format(f)
+    else: suffix = UNITS[N%10] + DEC[(N//10)%10] + CEN[N//100]
     return '{:.1f} {}'.format(number_part, suffix)
