@@ -8,7 +8,7 @@ money = 0.0
 # You can only have 1 upgrade 5 since it is only possible to afford 1 U4
 money_upgrades = [0.0, 0.0, 0.0, 0.0]
 money_upgrades_cost = [10.0, 1000.0, 1e5, 1e9]
-money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds a certain value to its cost (which quickly becomes negligible) except for U4 which is multiplied (exponantial price)
+money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds a certain value to its cost (which quickly becomes negligible) except for U4 which is multiplied (exponential price)
 money_upgrades_mult = [1.0, 1.0, 1.0, 1.0] # Multipliers given by the shoes
 money_upgrade_5, money_upgrade_5_cost = False, 1e10 # Separated because there can be only 1
 
@@ -30,7 +30,7 @@ class BasicSock:
         self.level = level
     
     @property
-    def name(self): return "Basic shoe"
+    def name(self): return "Basic sock"
     
     @property
     def description(self): return "Boost shoe depending only on level (x{:.3f})".format(math.log(self.level,1000)+1)
@@ -40,13 +40,16 @@ class BasicSock:
         return 1+math.log(self.level,1000)
 
 # Shoes and socks owned
-shoes = [BasicShoe(10)]
-socks = [BasicSock(12)]
+shoes = [BasicShoe(1),BasicShoe(1),BasicShoe(69)]
+socks = [BasicSock(1),BasicSock(1),BasicSock(420)]
 
-feet = 1
+feet = 2
+foot_price = 1e11
+foot_price_increase = 1.3
+
 # Contain index numbers to the shoes/socks in the previous lists
-shoes_equipped = [0]
-socks_equipped = [0]
+shoes_equipped = [0,1]
+socks_equipped = [0,1]
 
 # 0: Scientific
 # 1: Standard
@@ -103,6 +106,35 @@ def buy_upgrade_5(): # Same
     money_upgrade_5 = True
     return True
 
+def buy_foot():
+    global money, foot_price, feet
+    if money < foot_price: return False
+    money -= foot_price
+    foot_price **= foot_price_increase
+    feet += 1
+    shoes.append(BasicShoe(1))
+    socks.append(BasicSock(1))
+    shoes_equipped.append(len(shoes)-1)
+    socks_equipped.append(len(socks)-1)
+    return True
+
+def buy_shoe():
+    return False # TODO
+
+def buy_sock():
+    return False # TODO
+
+SOCK = 0
+SHOE = 1
+def equip(sock_or_shoe, inv_index, foot_index):
+    if sock_or_shoe == SOCK:
+        if inv_index in socks_equipped: return False
+        socks_equipped[foot_index] = inv_index
+    else:
+        if inv_index in shoes_equipped: return False
+        shoes_equipped[foot_index] = inv_index
+    return True
+
 def change_notation():
     global notation
     notation = (notation+1)%3
@@ -111,7 +143,7 @@ def change_notation():
 BEGIN = ['M','B','T','Qa','Qi','Sx','Sp','Oc','No']
 UNITS = ['', 'Un', 'Du', 'Tr','Qa','Qi','Sx','Sp','Oc','No']
 DEC = ['','De','Vg','Tg','Qag','Qig','Sxg','Spg','Og','Ng']
-CEN = ['','Ce','De','Te','Qae','Qie','Sxe','Spe','Oe','Ne']
+CEN = ['','Ce'] # The maximum is 179.7 UnCe (1.79e308)
 def float_to_str(f):
     if f < 1e6: return '{:.1f}'.format(f)
     if notation == 0: return '{:.2g}'.format(f)
