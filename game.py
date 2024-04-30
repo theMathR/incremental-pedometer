@@ -1,6 +1,9 @@
 # i'm bad at coding
 import math, random
 
+steps = 0
+total_steps = 0
+
 money = 0.0
 
 # The first upgrade is the amount of money/step
@@ -59,7 +62,11 @@ notation = 2
 # TODO: Elements, challenges
 
 def step():
-    global money, money_upgrades_mult
+    global money, money_upgrades_mult, steps, total_steps
+    
+    # Count steps
+    steps += 1
+    total_steps += 1
     
     # Apply shoe effects
     money_upgrades_mult = [1.0, 1.0, 1.0, 1.0] # Multipliers are reset to be recalculated
@@ -138,6 +145,10 @@ def equip(sock_or_shoe, inv_index, foot_index):
 def change_notation():
     global notation
     notation = (notation+1)%3
+
+def reset_steps():
+    global steps
+    steps = 0
 
 # Convert float to str depending on the notation
 BEGIN = ['M','B','T','Qa','Qi','Sx','Sp','Oc','No']
