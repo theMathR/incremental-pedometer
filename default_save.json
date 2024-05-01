@@ -1,0 +1,39 @@
+{
+    "steps": 0,
+    "total_steps": 0,
+    "money": 0.0,
+    "money_upgrades": [0.0, 0.0, 0.0, 0.0],
+    "money_upgrades_cost": [10.0, 1000.0, 1e5, 1e9],
+    "money_upgrades_mult": [1.0, 1.0, 1.0, 1.0] ,
+    "money_upgrade_5": false,
+    "shoes": [
+        {
+            "type": 0,
+            "level": 1,
+            "data": 0
+        },
+        {
+            "type": 0,
+            "level": 1,
+            "data": 0
+        }
+    ],
+    "socks": [
+        {
+            "type": 1,
+            "level": 1,
+            "data": 0
+        },
+        {
+            "type": 1,
+            "level": 1,
+            "data": 0
+        }
+    ],
+    "feet": 2,
+    "foot_price": 1e11,
+    "shoes_equipped": [0,1],
+    "socks_equipped": [0,1],
+    "notation": 2
+}
+

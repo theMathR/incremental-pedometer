@@ -1,24 +1,13 @@
 # i'm bad at coding
-import math, random
+import math, random, json
 
-steps = 0
-total_steps = 0
-
-money = 0.0
-
-# The first upgrade is the amount of money/step
-# The others autobuy the previous upgrade
-# You can only have 1 upgrade 5 since it is only possible to afford 1 U4
-money_upgrades = [0.0, 0.0, 0.0, 0.0]
-money_upgrades_cost = [10.0, 1000.0, 1e5, 1e9]
-money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds a certain value to its cost (which quickly becomes negligible) except for U4 which is multiplied (exponential price)
-money_upgrades_mult = [1.0, 1.0, 1.0, 1.0] # Multipliers given by the shoes
-money_upgrade_5, money_upgrade_5_cost = False, 1e10 # Separated because there can be only 1
-
-class BasicShoe:
-    def __init__(self, level=1):
+class Thing:
+    def __init__(self, level=1, data=0):
         self.level = level
-    
+        self.data = data
+
+class BasicShoe(Thing):
+    i=0
     @property
     def name(self): return "Basic shoe"
     
@@ -28,10 +17,9 @@ class BasicShoe:
     def apply_effect(self, multiplier=1):
         money_upgrades_mult[0] *= (1+math.log(self.level,100))*multiplier
 
-class BasicSock:
-    def __init__(self, level=1):
-        self.level = level
-    
+
+class BasicSock(Thing):
+    i=1
     @property
     def name(self): return "Basic sock"
     
@@ -42,22 +30,47 @@ class BasicSock:
     def boost(self):
         return 1+math.log(self.level,1000)
 
-# Shoes and socks owned
-shoes = [BasicShoe(1),BasicShoe(1),BasicShoe(69)]
-socks = [BasicSock(1),BasicSock(1),BasicSock(420)]
+ALL = [
+    BasicShoe,
+    BasicSock,
+] 
 
-feet = 2
-foot_price = 1e11
+with open('save.json','r') as save_file:
+    save = json.load(save_file)
+
+    steps = save['steps']
+    total_steps = save['total_steps']
+
+    money = save['money']
+
+    # The first upgrade is the amount of money/step
+    # The others autobuy the previous upgrade
+    # You can only have 1 upgrade 5 since it is only possible to afford 1 U4
+    money_upgrades = save['money_upgrades']
+    money_upgrades_cost = save['money_upgrades_cost']
+    money_upgrades_mult = save['money_upgrades_mult'] # Multipliers given by the shoes
+    money_upgrade_5 = save['money_upgrade_5'] # Separated because there can be only 1
+
+
+    feet = save['feet']
+    foot_price = save['foot_price']
+
+    # Contain index numbers to the shoes/socks in the previous lists
+    shoes_equipped = save['shoes_equipped']
+    socks_equipped = save['socks_equipped']
+    
+    # 0: Scientific
+    # 1: Standard
+    # 2: Mixed scientific (standard < 1e33)
+    notation = save['notation']
+    
+    # Shoes and socks owned
+    shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']]
+    socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']]
+
+money_upgrade_5_cost = 1e10
+money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds a certain value to its cost (which quickly becomes negligible) except for U4 which is multiplied (exponential price)
 foot_price_increase = 1.3
-
-# Contain index numbers to the shoes/socks in the previous lists
-shoes_equipped = [0,1]
-socks_equipped = [0,1]
-
-# 0: Scientific
-# 1: Standard
-# 2: Mixed scientific (standard < 1e33)
-notation = 2
 
 # TODO: Elements, challenges
 
@@ -149,6 +162,38 @@ def change_notation():
 def reset_steps():
     global steps
     steps = 0
+
+def save():
+    save = {
+        'steps': steps,
+        'total_steps': total_steps,
+        'money': money,
+        'money_upgrades': money_upgrades,
+        'money_upgrades_cost': money_upgrades_cost,
+        'money_upgrades_mult': money_upgrades_mult,
+        'money_upgrade_5': money_upgrade_5,
+        'feet': feet,
+        'foot_price': foot_price,
+        'shoes_equipped': shoes_equipped,
+        'socks_equipped': socks_equipped,
+        'notation': notation,
+        'shoes': [
+            {
+                'type': s.i,
+                'level': s.level,
+                'data': s.data,
+            }
+        for s in shoes],
+        'socks': [
+            {
+                'type': s.i,
+                'level': s.level,
+                'data': s.data,
+            }
+        for s in socks],
+    }
+    with open('save.json', 'w') as save_file:
+        json.dump(save, save_file)
 
 # Convert float to str depending on the notation
 BEGIN = ['M','B','T','Qa','Qi','Sx','Sp','Oc','No']

@@ -96,6 +96,8 @@ Button(textvariable = fbuy, command = fbuyf).pack()
 
 Button(text = 'Equip shoes and socks set below', command = equip).pack()
 
+Button(text='Save', command = game.save).pack()
+
 menus = [[Label(text='h'),Label(text='h')],[Label(text='h'),Label(text='h')]]
 menus_opti = [[StringVar(),StringVar(),],[StringVar(),StringVar(),]]
 

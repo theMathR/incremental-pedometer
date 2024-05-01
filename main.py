@@ -4,7 +4,7 @@ from consts import *
 import board
 import displayio
 import adafruit_st7735
-from digitalio import DigitalInOut
+from digitalio import DigitalInOut, Pull
 from adafruit_adxl34x import ADXL345
 from adafruit_bitmap_font import bitmap_font
 from adafruit_display_shapes.rect import Rect
@@ -73,6 +73,8 @@ buttons_input = [
     DigitalInOut(board.D1),
     DigitalInOut(board.D1),
 ]
+for b in buttons_input: # Idk if it's useful
+    b.pull = Pull.DOWN
 buttons = [False]*6
 buttons_done = [False]*6
 
