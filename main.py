@@ -4,6 +4,8 @@ from consts import *
 import board
 import displayio
 import adafruit_st7735
+from busio import I2C, SPI
+from fourwire import FourWire
 from digitalio import DigitalInOut, Pull
 from adafruit_adxl34x import ADXL345
 from adafruit_bitmap_font import bitmap_font
@@ -15,8 +17,11 @@ from adafruit_display_text.scrolling_label import ScrollingLabel
 def enable_screen():
     global display
     display = adafruit_st7735.ST7735(
-        ddisplayio.FourWire(
-            board.SPI() # TODO: Set pinout
+        FourWire(
+            SPI(clock=board.GP2, MOSI=board.GP3, MISO=board.GP4),
+            command=board.GP7,
+            chip_select=board.GP6,
+            reset=board.GP8,
         ),
         width=WIDTH,
         height=HEIGHT,
@@ -60,18 +65,17 @@ def configure_groups():
 def update_screen():
     status_label.text = str(game.steps)
 
-accelerometer = ADXL345(board.I2C()) # TODO: Set pinout
+accelerometer = ADXL345(I2C(scl=board.GP17, sda=board.GP16))
 accelerometer.enable_motion_detection() # TODO: Set threshold
 step_done = False
 
-# TODO: Set pinout
 buttons_input = [
-    DigitalInOut(board.D1),
-    DigitalInOut(board.D1),
-    DigitalInOut(board.D1),
-    DigitalInOut(board.D1),
-    DigitalInOut(board.D1),
-    DigitalInOut(board.D1),
+    DigitalInOut(board.GP1O), # Left
+    DigitalInOut(board.GP11), # Right
+    DigitalInOut(board.GP12), # Up
+    DigitalInOut(board.GP13), # Down
+    DigitalInOut(board.GP14), # A
+    DigitalInOut(board.GP15), # B
 ]
 for b in buttons_input: # Idk if it's useful
     b.pull = Pull.DOWN
