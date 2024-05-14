@@ -1,6 +1,6 @@
 import game
 from consts import *
-
+import time
 import board
 import displayio
 import adafruit_st7735
@@ -32,10 +32,11 @@ def configure_groups():
     menu_index = 0
 
 def enable_screen():
-    global display
+    global display, display_bus
+    display_bus = SPI(clock=board.GP2, MOSI=board.GP3, MISO=board.GP4)
     display = adafruit_st7735.ST7735(
         FourWire(
-            SPI(clock=board.GP2, MOSI=board.GP3, MISO=board.GP4),
+            display_bus,
             command=board.GP7,
             chip_select=board.GP6,
             reset=board.GP8,
@@ -49,6 +50,7 @@ def enable_screen():
 def disable_screen():
     global display
     displayio.release_displays()
+    display_bus.deinit()
     display = None
 
 displayio.release_displays()
@@ -83,6 +85,8 @@ for b in buttons_input: # Idk if it's useful
 buttons = [False]*6
 buttons_done = [False]*6
 
+last_used = time.monotonic()
+
 # THE HOLY MAIN LOOP
 while True:
     # Check accelerometer
@@ -96,9 +100,14 @@ while True:
         step_done = False
     
     # Check buttons
-    buttons = [b.value and not d for b,d in buttons_input, buttons_done]
-    buttons_done = [b.value for b in buttons_input] # To not count already pressed buttons
+    bval = [b.value for b in buttons_input]
+    buttons = [v and not d for v,d in zip(bval, buttons_done)]
+    buttons_done = bval[:] # To not count already pressed buttons
     if True in buttons:
+        last_used = time.monotonic()
         if display == None:
             enable_screen()
         update_screen()
+    
+    if display and time.monotonic() - last_used > 10:
+        disable_screen()
