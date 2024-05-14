@@ -4,7 +4,6 @@
     "money": 0.0,
     "money_upgrades": [0.0, 0.0, 0.0, 0.0],
     "money_upgrades_cost": [10.0, 1000.0, 1e5, 1e9],
-    "money_upgrades_mult": [1.0, 1.0, 1.0, 1.0] ,
     "money_upgrade_5": false,
     "shoes": [
         {

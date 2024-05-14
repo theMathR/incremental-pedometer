@@ -48,7 +48,6 @@ with open('save.json','r') as save_file:
     # You can only have 1 upgrade 5 since it is only possible to afford 1 U4
     money_upgrades = save['money_upgrades']
     money_upgrades_cost = save['money_upgrades_cost']
-    money_upgrades_mult = save['money_upgrades_mult'] # Multipliers given by the shoes
     money_upgrade_5 = save['money_upgrade_5'] # Separated because there can be only 1
 
 
@@ -71,6 +70,7 @@ with open('save.json','r') as save_file:
 money_upgrade_5_cost = 1e10
 money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds a certain value to its cost (which quickly becomes negligible) except for U4 which is multiplied (exponential price)
 foot_price_increase = 1.3
+money_upgrades_mult = [1.,1.,1.,1.] # Multipliers given by the shoes
 
 # TODO: Elements, challenges
 
@@ -170,7 +170,6 @@ def save():
         'money': money,
         'money_upgrades': money_upgrades,
         'money_upgrades_cost': money_upgrades_cost,
-        'money_upgrades_mult': money_upgrades_mult,
         'money_upgrade_5': money_upgrade_5,
         'feet': feet,
         'foot_price': foot_price,

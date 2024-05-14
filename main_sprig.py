@@ -3,12 +3,10 @@ from consts import *
 
 import board
 import displayio
-import adafruit_st7735
+import adafruit_st7735r
 from busio import I2C, SPI
 from fourwire import FourWire
 from digitalio import DigitalInOut, Pull
-from adafruit_adxl34x import ADXL345
-from adafruit_bitmap_font import bitmap_font
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_text.label import Label
 from adafruit_display_shapes.roundrect import RoundRect
@@ -30,19 +28,20 @@ def configure_groups():
     display.root_group.append(menu)
 
     menu_index = 0
-
+    
 def enable_screen():
     global display
-    display = adafruit_st7735.ST7735(
+    display = adafruit_st7735r.ST7735R(
         FourWire(
-            SPI(clock=board.GP2, MOSI=board.GP3, MISO=board.GP4),
-            command=board.GP7,
-            chip_select=board.GP6,
-            reset=board.GP8,
+            SPI(clock=board.GP18, MOSI=board.GP19, MISO=board.GP16),
+            command=board.GP22,
+            chip_select=board.GP20,
+            reset=board.GP26,
         ),
-        width=WIDTH,
-        height=HEIGHT,
-        auto_refresh=False
+        rotation=270,
+        width=160,
+        height=128,
+        backlight_pin=board.GP17
     )
     configure_groups()
 
@@ -66,27 +65,27 @@ enable_screen()
 def update_screen():
     status_label.text = str(game.steps)
 
-accelerometer = ADXL345(I2C(scl=board.GP17, sda=board.GP16))
-accelerometer.enable_motion_detection() # TODO: Set threshold
+accelerometer_sim = DigitalInOut(board.GP12)
+accelerometer_sim.pull = Pull.UP
 step_done = False
 
 buttons_input = [
-    DigitalInOut(board.GP10), # Left
-    DigitalInOut(board.GP11), # Right
-    DigitalInOut(board.GP12), # Up
-    DigitalInOut(board.GP13), # Down
-    DigitalInOut(board.GP14), # A
-    DigitalInOut(board.GP15), # B
+    DigitalInOut(board.GP6), # Left
+    DigitalInOut(board.GP8), # Right
+    DigitalInOut(board.GP5), # Up
+    DigitalInOut(board.GP7), # Down
+    DigitalInOut(board.GP15), # A
+    DigitalInOut(board.GP14), # B
 ]
-for b in buttons_input: # Idk if it's useful
-    b.pull = Pull.DOWN
+for b in buttons_input: # It's useful
+    b.pull = Pull.UP
 buttons = [False]*6
 buttons_done = [False]*6
 
 # THE HOLY MAIN LOOP
 while True:
     # Check accelerometer
-    if accelerometer.events['motion']:
+    if not accelerometer_sim.value:
         if not step_done:
             game.step()
             step_done = True
@@ -96,8 +95,8 @@ while True:
         step_done = False
     
     # Check buttons
-    buttons = [b.value and not d for b,d in buttons_input, buttons_done]
-    buttons_done = [b.value for b in buttons_input] # To not count already pressed buttons
+    buttons = [(not b.value) and not d for b,d in zip(buttons_input, buttons_done)]
+    buttons_done = [(not b.value) for b in buttons_input] # To not count already pressed buttons
     if True in buttons:
         if display == None:
             enable_screen()

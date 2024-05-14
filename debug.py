@@ -67,6 +67,7 @@ def fbuyf():
 root = Tk()
 root.title("Incremental Podometer Test")
 
+Button(text='Save', command = game.save).pack()
 
 money = StringVar()
 u = [StringVar(), StringVar(), StringVar(), StringVar(), StringVar()]
@@ -96,10 +97,8 @@ Button(textvariable = fbuy, command = fbuyf).pack()
 
 Button(text = 'Equip shoes and socks set below', command = equip).pack()
 
-Button(text='Save', command = game.save).pack()
-
-menus = [[Label(text='h'),Label(text='h')],[Label(text='h'),Label(text='h')]]
-menus_opti = [[StringVar(),StringVar(),],[StringVar(),StringVar(),]]
+menus = [[Label(text='h'),Label(text='h')] for i in range(game.feet)]
+menus_opti = [[StringVar(),StringVar(),] for i in range(game.feet)]
 
 step()
 update_slist()
