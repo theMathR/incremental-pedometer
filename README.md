@@ -12,4 +12,7 @@ Refer to the [hardware repo](https://github.com/Spectralo/IncrementalPodometerHa
 
 (rename these files to code.py on your circuit python device to make it the startup file)
 
-Made by Mathr and Spectralo for the [Trail](https://trail.hackclub.com) organised by [Hackclub](https://hackclub.com/)
+Made by MathR and Spectralo for the [Trail](https://trail.hackclub.com) organised by [Hackclub](https://hackclub.com/)
+
+# Disclaimer by MathR
+My code is very messy.
