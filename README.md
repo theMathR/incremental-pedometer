@@ -14,5 +14,5 @@ Refer to the [hardware repo](https://github.com/Spectralo/IncrementalPodometerHa
 
 Made by MathR and Spectralo for the [Trail](https://trail.hackclub.com) organised by [Hackclub](https://hackclub.com/)
 
-# Disclaimer by MathR
-My code is very messy.
+### Disclaimer by MathR _and spectralo_
+My code is very messy. _and i'll make it even more messy :)_
