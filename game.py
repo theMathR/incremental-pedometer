@@ -202,7 +202,7 @@ CEN = ['','Ce'] # The maximum is 179.7 UnCe (1.79e308)
 def float_to_str(f):
     if f < 1e6: return '{:.1f}'.format(f)
     if notation == 0: return '{:.2g}'.format(f)
-    N = math.floor(math.log10(f)/3)
+    N = math.floor(math.log(f,10)/3)
     number_part = f / (1000**N)
     N-=1
     if f < 1e33: suffix = BEGIN[N-1]

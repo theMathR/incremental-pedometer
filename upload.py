@@ -31,9 +31,9 @@ while True:
             f.close()
         sprig = Confirm.ask("Are you uploading to a Sprig?")
         if sprig:
-            files = ["main_sprig.py","consts.py","save.json","default_save.json","game.py","lib_sprig"]
+            files = ["main_sprig.py","save.json","default_save.json","game.py","boot.py","lib_sprig"]
         else:
-            files = ["main.py","const.py","save.json","default_save.json","game.py","online.py","lib"]
+            files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib"]
         with console.status("[bold green] Moving files ...") as status:
             while files:
                 file = files.pop(0)
