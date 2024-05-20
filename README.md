@@ -7,10 +7,7 @@ Refer to the [hardware repo](https://github.com/Spectralo/IncrementalPodometerHa
 ## How to run it ?
 
 - Use **debug.py** to run it on a computer
-- Use **main_sprig.py** to run it on a sprig
-- use **main.py** to run it on an _Incremental Podometer_ !!
-
-(rename these files to code.py on your circuit python device to make it the startup file)
+- Use the new script **upload.py** to upload the software to a sprig or an incremental podometer (You need to install rich to use it -> ``pip install rich``)
 
 Made by MathR and Spectralo for the [Trail](https://trail.hackclub.com) organised by [Hackclub](https://hackclub.com/)
 
