@@ -1,0 +1,50 @@
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.prompt import Confirm
+from time import sleep
+import os
+import shutil
+
+sprig = False
+loop = False
+
+files = [f"task {n}" for n in range(1, 11)]
+console = Console()
+doSaving = False
+
+console.print("[bold blue]Welcome to the IncrPodometer software uploader[/bold blue]")
+while True:
+    f = open("upload_settings.txt","r")
+    port = Prompt.ask("[italic]Enter the directory of your board ( /run/media/{user}/CIRCUITPY/ on Fedora)[/italic]", default=f.read())
+    f.close()
+    console.print()
+    if os.path.exists(port+"boot_out.txt"):
+        console.print("[bold green]Device found ![/bold green]")
+        console.print()
+        f = open("upload_settings.txt","r")
+        if f.read() != port:
+            doSaving = Confirm.ask("Do you want to save this device ? (The next time you'll just have to hit enter)")
+        f.close()
+        if doSaving:
+            f = open("upload_settings.txt","w")
+            f.write(port)
+            f.close()
+        sprig = Confirm.ask("Are you uploading to a Sprig?")
+        if sprig:
+            files = ["main_sprig.py","consts.py","save.json","default_save.json","game.py","lib_sprig"]
+        else:
+            files = ["main.py","const.py","save.json","default_save.json","game.py","online.py","lib"]
+        with console.status("[bold green] Moving files ...") as status:
+            while files:
+                file = files.pop(0)
+                if file == "main_sprig.py" or file == "main.py":
+                    shutil.copyfile(file, port+"code.py")
+                elif file == "lib" or file == "lib_sprig":
+                    shutil.copytree(file, port+"lib/")
+                else:
+                    shutil.copyfile(file, port+file)
+                
+                console.log(f"{file} moved")
+            break
+    else:
+        console.print("[bold red]Device not found :confused: [/bold red]")
