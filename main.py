@@ -14,8 +14,11 @@ from adafruit_display_text.label import Label
 from adafruit_display_shapes.roundrect import RoundRect
 from adafruit_display_text.scrolling_label import ScrollingLabel
 
+TAB_COUNT = 0
 tab_init_functions = []
 def tab_init(func):
+    global TAB_COUNT
+    TAB_COUNT+=1
     tab_init_functions.append(func)
     return func
 tab_update_functions = []
@@ -24,8 +27,7 @@ def tab_update(func):
     return func
 
 # CREATE TABS HERE
-TAB_COUNT = 2
-
+    
 @tab_init
 def init_tab_0(tab):
     tab.append(Label(FONT, text="Random text go brr", color=0xff0000, y=50))
@@ -41,19 +43,33 @@ def init_tab_1(tab):
 @tab_update
 def update_tab_1(tab):
     tab[0].y += 1
+    
+@tab_init
+def init_secret_tab(tab):
+    print("Why are you looking at the console?")
+    tab.append(Label(FONT, text="This is MathR's secret tab,\n           enjoy.", color=0x00ff00, y=30, x=0))
+    bitmap=displayio.OnDiskBitmap("/assets/secret_nubert.bmp")
+    nubert=displayio.TileGrid(bitmap, pixel_shader=bitmap.pixel_shader)
+    nubert.x = 69 # nice
+    nubert.y = 60
+    tab.append(nubert)
 
+@tab_update
+def update_secret_tab(tab):
+    pass
 #------------
+
 tab_index = 0
 def update_screen():
     temp = status_label.current_index
-    status_label.full_text = f"Money: {game.float_to_str(game.money)} | Steps: {game.steps} | " *2
+    status_label.full_text = f"Money: {game.float_to_str(game.money)} | Steps: {game.steps} | "*2
     status_label.current_index = temp
     tab_update_functions[tab_index](tabs[tab_index])
     status_label.update()
     display.refresh()
 
 def configure_groups():
-    global status_label, tabs, tab_index, tab_locked
+    global status_label, tabs, tab_index, tab_locked, TAB_COUNT
     display.root_group = displayio.Group()
     
     display.root_group.append(Rect(0, 20, 160, 100, fill=0x000000))
@@ -74,6 +90,7 @@ def configure_groups():
         tabs[i].hidden = True
     tabs[0].hidden = False
     update_screen()
+    TAB_COUNT -= 1 # for the secret tab
 
 def enable_screen():
     global display, display_bus
@@ -123,6 +140,9 @@ for b in buttons_input:
 buttons = [False]*6
 buttons_done = [False]*6
 
+konami_code = [UP, UP, DOWN, DOWN, LEFT, RIGHT, LEFT, RIGHT, B, A]
+konami_index = 0
+
 last_used = time.monotonic()
 last_saved = time.monotonic()
 
@@ -156,10 +176,18 @@ while True:
                 tabs[tab_index].hidden = True
                 tab_index = (tab_index+move)%TAB_COUNT
                 tabs[tab_index].hidden = False
+        if buttons[konami_code[konami_index]]:
+            konami_index+=1
+            if konami_index == 10:
+                tabs[tab_index].hidden = True
+                tab_index = -1
+                tabs[tab_index].hidden = False
+                konami_index=0
+        else: konami_index=0
         update_screen()
     
     t = time.monotonic()
-    if display and t - last_used > 15:
+    if display and (t - last_used > 15 or (not tab_locked and buttons[B] and konami_index!=9)):
         disable_screen()
     if t - last_saved > 60:
         last_saved = t
@@ -168,4 +196,4 @@ while True:
     if display:
         status_label.update()
         display.refresh()
-
+        

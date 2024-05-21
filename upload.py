@@ -12,6 +12,13 @@ files = [f"task {n}" for n in range(1, 11)]
 console = Console()
 doSaving = False
 
+def copydir(dest):
+    try:
+        shutil.copytree(file, port+dest)
+    except FileExistsError:
+        shutil.rmtree(port+dest)
+        shutil.copytree(file, port+dest)
+
 console.print("[bold blue]Welcome to the IncrPodometer software uploader[/bold blue]")
 while True:
     f = open("upload_settings.txt","r")
@@ -31,16 +38,18 @@ while True:
             f.close()
         sprig = Confirm.ask("Are you uploading to a Sprig?")
         if sprig:
-            files = ["main_sprig.py","save.json","default_save.json","game.py","boot.py","lib_sprig"]
+            files = ["main_sprig.py","save.json","default_save.json","game.py","boot.py","lib_sprig","assets"]
         else:
-            files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib"]
+            files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib","assets"]
         with console.status("[bold green] Moving files ...") as status:
             while files:
                 file = files.pop(0)
                 if file == "main_sprig.py" or file == "main.py":
                     shutil.copyfile(file, port+"code.py")
                 elif file == "lib" or file == "lib_sprig":
-                    shutil.copytree(file, port+"lib/")
+                    copydir('lib/')
+                elif file == "assets":
+                    copydir('assets')
                 else:
                     shutil.copyfile(file, port+file)
                 
