@@ -88,7 +88,7 @@ def disable_screen():
     display = None
 
 accelerometer = ADXL345(I2C(scl=board.GP17, sda=board.GP16))
-accelerometer.enable_motion_detection() # TODO: Set threshold
+accelerometer.enable_motion_detection(threshold=20) # TODO: Set threshold
 step_done = False
 
 buttons_input = [
@@ -121,10 +121,11 @@ last_saved = time.monotonic()
     
 @tab_init
 def init_steps_tab(tab):
-    tab.append(Label(FONT, text=f"Steps: {game.steps} ({game.steps*0.037} calories)\nPress A to reset\nTotal: {game.total_steps} ({game.total_steps*0.037} calories)\n(1000 steps = 37 cal)", color=TEXT_COLOR, y=50))
+    tab.append(Label(FONT, text=f"Steps: {game.steps} ({game.steps*0.037} calories)\nPress A to reset the count\nTotal: {game.total_steps} ({game.total_steps*0.037} calories)\n(1000 steps = 37 cal)", color=TEXT_COLOR, y=50))
 
 @tab_update
 def update_steps_tab(tab):
+    tab[0].text=f"Steps: {game.steps} ({game.steps*0.037} calories)\nPress A to reset\nTotal: {game.total_steps} ({game.total_steps*0.037} calories)\n(1000 steps = 37 cal)"
     if buttons[A]:
         game.reset_steps()
 
@@ -159,11 +160,13 @@ while True:
     if accelerometer.events['motion']:
         if not step_done:
             game.step()
-            step_done = True
             if display != None:
                 update_screen()
+        if not step_done%2:
+            step_done += 1
     else:
-        step_done = False
+        if step_done % 2:
+            step_done = (step_done+1)%4
     
     # Check buttons
     bval = [not b.value for b in buttons_input]

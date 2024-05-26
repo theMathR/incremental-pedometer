@@ -36,20 +36,14 @@ while True:
             f = open("upload_settings.txt","w")
             f.write(port)
             f.close()
-        sprig = Confirm.ask("Are you uploading to a Sprig?")
-        if sprig:
-            files = ["main_sprig.py","save.json","default_save.json","game.py","boot.py","lib_sprig","assets"]
-        else:
-            files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib","assets"]
+        files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib","assets"]
         with console.status("[bold green] Moving files ...") as status:
             while files:
                 file = files.pop(0)
-                if file == "main_sprig.py" or file == "main.py":
+                if file == "main.py":
                     shutil.copyfile(file, port+"code.py")
-                elif file == "lib" or file == "lib_sprig":
-                    copydir('lib/')
-                elif file == "assets":
-                    copydir('assets')
+                elif file == "lib" or file == "assets":
+                    copydir(file)
                 else:
                     shutil.copyfile(file, port+file)
                 
