@@ -16,8 +16,8 @@ from adafruit_display_text.scrolling_label import ScrollingLabel
 BG_COLOR = 0x032412
 BAR_COLOR = 0x0f0f0f
 TEXT_COLOR = 0xFFF5D8
-
 TAB_COUNT = -1
+
 menu_index = 0
 tab_init_functions = []
 def tab_init(func):

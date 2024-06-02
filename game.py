@@ -1,12 +1,31 @@
 # i'm bad at coding
 import math, random, json
 
-class Thing:
-    def __init__(self, level=1, data=0):
+# TODO: Fix saving
+
+def gauss(mu=0,sigma=1):
+    while True:
+        u = random.uniform(-1,1)
+        v = random.uniform(-1,1)
+        s = u**2 + v**2
+        if s >= 1: continue
+        return mu + sigma*math.sqrt(-2*math.log(s)/s)
+
+
+class Item:
+    def __init__(self, level=1, data=0, durability=int(750000+1000*gauss(mu=0,sigma=15))):
         self.level = level
         self.data = data
+        self.durability = durability
 
-class BasicShoe(Thing):
+class Shoe(Item): pass
+class Sock(Item): pass
+
+class Nothing:
+    def apply_effect(self, multiplier=1): pass
+    boost = 1
+
+class BasicShoe(Shoe):
     i=0
     @property
     def name(self): return "Basic shoe"
@@ -18,7 +37,7 @@ class BasicShoe(Thing):
         money_upgrades_mult[0] *= (1+math.log(self.level,100))*multiplier
 
 
-class BasicSock(Thing):
+class BasicSock(Sock):
     i=1
     @property
     def name(self): return "Basic sock"
@@ -33,6 +52,25 @@ class BasicSock(Thing):
 ALL = [
     BasicShoe,
     BasicSock,
+] 
+
+TIERS = [
+    [ # Tier 1
+    BasicShoe,
+    BasicSock,
+    ],
+    [ # Tier 2
+    BasicShoe,
+    BasicSock,
+    ],
+    [ # Tier 3
+    BasicShoe,
+    BasicSock,
+    ],
+    [ # Tier 4
+    BasicShoe,
+    BasicSock,
+    ],
 ] 
 
 with open('save.json','r') as save_file:
@@ -66,6 +104,9 @@ with open('save.json','r') as save_file:
     # Shoes and socks owned
     shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']]
     socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']]
+    
+    item_price = save['item_price']
+    bears = save['bears']
 
 money_upgrade_5_cost = 1e10
 money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds a certain value to its cost (which quickly becomes negligible) except for U4 which is multiplied (exponential price)
@@ -84,7 +125,7 @@ def step():
     # Apply shoe effects
     money_upgrades_mult = [1.0, 1.0, 1.0, 1.0] # Multipliers are reset to be recalculated
     for i in range(feet):
-        shoe, sock = shoes[shoes_equipped[i]], socks[socks_equipped[i]]
+        shoe, sock = shoes[shoes_equipped[i]] if shoes_equipped[i] else Nothing(), socks[socks_equipped[i]] if socks_equipped[i] else Nothing()
         shoe.apply_effect(sock.boost)
     
     # Create money based on U1
@@ -94,6 +135,24 @@ def step():
     for i in range(3):
         buy_upgrade(i, money_upgrades[i+1] * money_upgrades_mult[i+1])
     if money_upgrade_5: buy_upgrade_4()
+    
+    # Update item durability
+    update_durability(shoes,shoes_equipped)
+    update_durability(socks,socks_equipped)
+
+def update_durability(inventory, equipped):
+    to_remove=[]
+    for i,s in enumerate(equipped):
+        inventory[s].durability-=1
+        if inventory[s].durability == 0:
+            to_remove.append(s)
+    for r in to_remove:
+        inventory.pop(r)
+        for i,s in enumerate(equipped):
+            if r == s:
+                equipped[i]=False
+            if s > r:
+                equipped[i]-=1
 
 def buy_upgrade(i,n=1): # i is the upgrade index, n is the number of upgrades to buy
     global money
@@ -138,11 +197,35 @@ def buy_foot():
     socks_equipped.append(len(socks)-1)
     return True
 
-def buy_shoe():
-    return False # TODO
-
-def buy_sock():
-    return False # TODO
+item_price_multiplier = 1.05
+def buy_item():
+    global money, item_price, bears
+    if money < item_price: return False
+    money -= item_price
+    item_price *= item_price_multiplier
+    
+    tier_rand = random.randint(1,16)
+    if tier_rand <= 8:
+        tier = TIERS[0]
+    elif tier_rand <= 12:
+        tier = TIERS[1]
+    elif tier_rand <= 14:
+        tier = TIERS[2]
+    elif tier_rand <= 15:
+        tier = TIERS[3]
+    else:
+        bears+=1
+        return True
+    
+    item = random.choice(tier)()
+    item.durability = 5
+    if tier_rand==15:
+        item.durability = math.inf
+    if isinstance(item, Sock):
+        socks.append(item)
+    else:
+        shoes.append(item)
+    return True
 
 SOCK = 0
 SHOE = 1
@@ -190,6 +273,8 @@ def save():
                 'data': s.data,
             }
         for s in socks],
+        'bears': bears,
+        'item_price': item_price,
     }
     with open('save.json', 'w') as save_file:
         json.dump(save, save_file)
@@ -209,3 +294,4 @@ def float_to_str(f):
     elif notation == 2: return '{:.2g}'.format(f)
     else: suffix = UNITS[N%10] + DEC[(N//10)%10] + CEN[N//100]
     return '{:.1f} {}'.format(number_part, suffix)
+
