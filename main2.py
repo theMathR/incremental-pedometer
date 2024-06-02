@@ -1,6 +1,7 @@
 import game
 import time
 import board
+import storage
 import displayio
 import adafruit_st7735r
 from terminalio import FONT
@@ -14,6 +15,7 @@ from adafruit_display_shapes.roundrect import RoundRect
 from adafruit_display_text.scrolling_label import ScrollingLabel
 from game import steps
 from game import money
+from adafruit_button.button import Button
 
 
 # Importants var
@@ -22,9 +24,41 @@ BG_COLOR = 0xffffff
 BAR_COLOR = 0xffffff
 TEXT_COLOR = 0x000000
 TAB_COUNT = -1
-title = "Hello"
 
 # Tabs
+
+class Tab(displayio.Group):
+    def __init__(self):
+        super().__init__()
+        self.button_index = 0
+        self.buttons = []
+        self.button_functions = []
+    
+    def _append_button(self, b, f):
+        self.buttons.append(b)
+        self.append(b)
+        self.button_functions.append(f)
+
+    def append_button(self, text, function, height=20, margin=5):
+        self._append_button(Button(x=0, height=height, label=text, y=margin+(self[-1].y+self[-1].height if len(self) else 0), width=160, label_font=FONT), function)
+
+    def scroll(self):
+        if not self.buttons: return
+        if buttons[UP]:
+            self.button_index = (self.button_index-1)%len(self.buttons)
+        if buttons[DOWN]:
+            self.button_index = (self.button_index+1)%len(self.buttons)
+        for i in range(len(self.buttons)):
+            self.buttons[i].selected = i==self.button_index
+        if self.y + self.buttons[self.button_index].y + self.buttons[self.button_index].height > 108:
+            self.y = 108-self.buttons[self.button_index].height-self.buttons[self.button_index].y 
+        if self.y + self.buttons[self.button_index].y < 0:
+            self.y = -self.buttons[self.button_index].y
+        if buttons[A]:
+            self.button_functions[self.button_index]()
+
+
+
 menu_index = 0
 tab_init_functions = []
 tab_names = []
@@ -47,24 +81,26 @@ tab_index = 0
 
 @tab_init('Steps')
 def init_steps_tab(tab):
-    tab.append(Label(FONT, text=f"Steps: {game.steps} ({game.steps*0.037} calories)\nPress A to reset the count\nTotal: {game.total_steps} ({game.total_steps*0.037} calories)\n(1000 steps = 37 cal)", color=TEXT_COLOR, y=50))
+    tab.append(Label(FONT, text="h", y=20, color=TEXT_COLOR))
+    tab.append_button("Reset step counter", game.reset_steps)
+    tab.append(Label(FONT, text="h", y=60, color=TEXT_COLOR))
+    tab.append(Label(FONT, text="(1000 steps = 37 cal)", y=80, color=TEXT_COLOR))
 
 @tab_update
 def update_steps_tab(tab):
-    tab[0].text=f"Steps: {game.steps} ({game.steps*0.037} calories)\nPress A to reset\nTotal: {game.total_steps} ({game.total_steps*0.037} calories)\n(1000 steps = 37 cal)"
-    if buttons[A]:
-        game.reset_steps()
-    
+    tab[0].text=f"Steps: {game.steps} ({game.steps*0.037} calories)"
+    tab[2].text=f"Total: {game.total_steps} ({game.total_steps*0.037} calories)"
+
 
 @tab_init('Test')
 def init_tab_1(tab):
-    tab.append(Rect(5, 5, 10, 10, fill=0x00ff00))
+    tab.append_button("Button 1", lambda: print("Button 1"))
+    tab.append_button("Button 2 | 20K", lambda: print("Button 2"))
 
 
 @tab_update
 def update_tab_1(tab):
-    tab[0].y += 1
-
+    pass
     
 @tab_init('Secret')
 def init_secret_tab(tab):
@@ -83,23 +119,24 @@ def update_secret_tab(tab):
 # Configuring hardware
 # Screen part
 def update_screen():
-    display.refresh()
+    tabs[tab_index].scroll()
     tab_update_functions[tab_index](tabs[tab_index])
+    display.refresh()
 
 def configure_groups():
-    global tab_name, status_label, tabs, tab_index, tab_locked, TAB_COUNT, title
+    global tab_name, status_label, tabs, tab_index, tab_locked, TAB_COUNT
     display.root_group = displayio.Group()
     
     display.root_group.append(Rect(0, 20, 160, 108, fill=BG_COLOR))
+
+    tabs = displayio.Group(y=20)
+    display.root_group.append(tabs)
     
     display.root_group.append(Rect(0, 0, 160, 20, fill=BAR_COLOR))
     display.root_group.append(Rect(0, 20, 160, 2, fill=TEXT_COLOR))
-    display.root_group.append(Rect(80, 0, 2, 20, fill=TEXT_COLOR))
-    
-    tabs = displayio.Group(y=20)
-    display.root_group.append(tabs)
+    display.root_group.append(Rect(80, 0, 2, 20, fill=TEXT_COLOR))    
 
-    tab_name = Label(FONT,text=f"{tab_names[tab_index]}", max_characters=29, color=TEXT_COLOR)
+    tab_name = Label(FONT,text=tab_names[tab_index], max_characters=29, color=TEXT_COLOR)
     money_label = Label(FONT,text="3,4e128 $", max_characters=29, color=TEXT_COLOR)
     tab_name.y = 10
     tab_name.x = 10
@@ -110,7 +147,7 @@ def configure_groups():
     tab_locked = False
 
     for i in range(TAB_COUNT+1): # for the secret tab
-        tabs.append(displayio.Group())
+        tabs.append(Tab())
         tab_init_functions[i](tabs[i])
         tabs[i].hidden = True
 
@@ -132,7 +169,7 @@ def enable_screen():
         width=160,
         height=128,
         backlight_pin=board.GP5,
-        auto_refresh=False
+        auto_refresh=False,
     )
     configure_groups()
 
@@ -224,6 +261,7 @@ while True:
             if konami_index == 10:
                 tabs[tab_index].hidden = True
                 tab_index = -1
+                tab_name.text = tab_names[tab_index]
                 tabs[tab_index].hidden = False
                 konami_index=0
         else: 
@@ -235,7 +273,9 @@ while True:
         disable_screen()
     if t - last_saved > 60:
         last_saved = t
-        # game.save()
-    if display:
-        tab_name.text = title
-        
+        try:
+            storage.remount('/', readonly=False)
+            game.save()
+            storage.remount('/', readonly=True)
+        except RuntimeError:
+            print('USB enabled, save skipped')

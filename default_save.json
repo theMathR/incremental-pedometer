@@ -33,6 +33,7 @@
     "foot_price": 1e11,
     "shoes_equipped": [0,1],
     "socks_equipped": [0,1],
-    "notation": 2
+    "notation": 2,
+    "bears": 0,
+    "item_price": 1000
 }
-
