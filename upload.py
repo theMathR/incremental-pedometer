@@ -36,11 +36,11 @@ while True:
             f = open("upload_settings.txt","w")
             f.write(port)
             f.close()
-        files = ["main2.py","save.json","default_save.json","game.py","online.py","boot.py","lib","assets"]
+        files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib","assets"]
         with console.status("[bold green] Moving files ...") as status:
             while files:
                 file = files.pop(0)
-                if file == "main2.py":
+                if file == "main.py":
                     shutil.copyfile(file, port+"code.py")
                 elif file == "lib" or file == "assets":
                     copydir(file)
