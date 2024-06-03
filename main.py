@@ -48,6 +48,7 @@ class Tab(displayio.Group):
             g.y=self[-1].y+self[-1].height 
         if isinstance(g, Label):
             g.y += int((g.line_spacing*g.text.count('\n')+FONT_SIZE)/2)
+        g.y+=margin
         super().append(g)
     
     def _append_button(self, b, f, margin=2):
