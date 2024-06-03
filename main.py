@@ -18,7 +18,7 @@ from game import money
 from adafruit_button.button import Button
 
 def EZLabel(text=""):
-    return Label(FONT, text=text, color=TEXT_COLOR)
+    return Label(FONT, text=text, color=TEXT_COLOR, x=1)
 
 # Importants var
 
