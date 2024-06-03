@@ -1,1 +1,1 @@
-/run/media/arthur/CIRCUITPY/
+/media/mathr/CIRCUITPY/
