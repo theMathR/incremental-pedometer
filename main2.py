@@ -33,14 +33,16 @@ class Tab(displayio.Group):
         self.button_index = 0
         self.buttons = []
         self.button_functions = []
+        self.elements = []
     
     def _append_button(self, b, f):
         self.buttons.append(b)
+        self.elements.append(b)
         self.append(b)
         self.button_functions.append(f)
 
-    def append_button(self, text, function, height=20, margin=5):
-        self._append_button(Button(x=0, height=height, label=text, y=margin+(self[-1].y+self[-1].height if len(self) else 0), width=160, label_font=FONT), function)
+    def append_button(self, text, function, height=20, margin=10):
+        self._append_button(Button(x=0, height=height, label=text, y=(self[-1].y+self[-1].height) if len(self) else 0, width=160, label_font=FONT), function)
 
     def scroll(self):
         if not self.buttons: return
@@ -57,7 +59,12 @@ class Tab(displayio.Group):
         if buttons[A]:
             self.button_functions[self.button_index]()
 
+    def _append_label(self, l):
+        self.elements.append(l)
+        self.append(l)
 
+    def append_label(self, text, color=TEXT_COLOR, margin=5):
+        self._append_label(Label(FONT, text=text, color=color, x=10, y=(self[-1].y+self[-1].height if len(self) else 20)))
 
 menu_index = 0
 tab_init_functions = []
@@ -81,21 +88,25 @@ tab_index = 0
 
 @tab_init('Steps')
 def init_steps_tab(tab):
-    tab.append(Label(FONT, text="h", y=20, color=TEXT_COLOR))
+    tab.append_label(text="h", color=TEXT_COLOR)
+    tab.append_label(text="h", color=TEXT_COLOR)
+    tab.append_label(text="(1000 steps = 37 cal)",color=TEXT_COLOR)
     tab.append_button("Reset step counter", game.reset_steps)
-    tab.append(Label(FONT, text="h", y=60, color=TEXT_COLOR))
-    tab.append(Label(FONT, text="(1000 steps = 37 cal)", y=80, color=TEXT_COLOR))
+
 
 @tab_update
 def update_steps_tab(tab):
     tab[0].text=f"Steps: {game.steps} ({game.steps*0.037} calories)"
-    tab[2].text=f"Total: {game.total_steps} ({game.total_steps*0.037} calories)"
+    tab[1].text=f"Total: {game.total_steps} ({game.total_steps*0.037} calories)"
 
 
 @tab_init('Test')
 def init_tab_1(tab):
     tab.append_button("Button 1", lambda: print("Button 1"))
     tab.append_button("Button 2 | 20K", lambda: print("Button 2"))
+    tab.append_label("Hello")
+    tab.append_button("Button 2 | 20K", lambda: print("Button 2"))
+
 
 
 @tab_update
