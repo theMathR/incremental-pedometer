@@ -11,14 +11,23 @@ from digitalio import DigitalInOut, Pull
 from adafruit_adxl34x import ADXL345
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_text.label import Label
+from adafruit_display_text import LabelBase
 from adafruit_display_shapes.roundrect import RoundRect
 from adafruit_display_text.scrolling_label import ScrollingLabel
-from game import steps
-from game import money
 from adafruit_button.button import Button
+
+f2str = game.float_to_str
 
 def EZLabel(text=""):
     return Label(FONT, text=text, color=TEXT_COLOR, x=1)
+
+def EZScrollingLabel(text=""):
+    return ScrollingLabel(FONT, text=text, color=TEXT_COLOR, x=1, max_characters=30)
+
+def set_scrolling_text(label, text):
+    c_i = label.current_index
+    label.full_text = text
+    label.current_index = c_i
 
 # Importants var
 
@@ -37,16 +46,19 @@ class Tab(displayio.Group):
         super().__init__()
         self.button_index = 0
         self.buttons = []
+        self.scrolling_labels = []
         self.button_functions = []
     
     def append(self, g, margin=2):
+        if isinstance(g, ScrollingLabel):
+            self.scrolling_labels.append(g)
         if len(self) == 0:
             g.y = 0
-        elif isinstance(self[-1], Label):
-            g.y = int(self[-1].y+(self[-1].line_spacing*self[-1].text.count('\n')+FONT_SIZE)/2)
+        elif isinstance(self[-1], LabelBase):
+            g.y = int(self[-1].y+(self[-1].line_spacing+FONT_SIZE)*self[-1].text.count('\n')+FONT_SIZE/2)
         else:
             g.y=self[-1].y+self[-1].height 
-        if isinstance(g, Label):
+        if isinstance(g, LabelBase):
             g.y += int((g.line_spacing*g.text.count('\n')+FONT_SIZE)/2)
         g.y+=margin
         super().append(g)
@@ -64,9 +76,14 @@ class Tab(displayio.Group):
     def scroll(self):
         if not self.buttons: return
         if buttons[UP]:
-            self.button_index = (self.button_index-1)%len(self.buttons)
+            if self.button_index==0 and self.y != 0:
+                self.y=0
+            else:
+                self.button_index = (self.button_index-1)%len(self.buttons)
         if buttons[DOWN]:
             self.button_index = (self.button_index+1)%len(self.buttons)
+            if self.button_index==0:
+                self.y = 0
         for i in range(len(self.buttons)):
             self.buttons[i].selected = i==self.button_index
         if self.y + self.buttons[self.button_index].y + self.buttons[self.button_index].height > 108:
@@ -110,15 +127,20 @@ def update_steps_tab(tab):
     tab[2].text=f"Total: {game.total_steps} ({game.total_steps*0.037} calories)"
 
 
-@tab_init('Test')
+@tab_init('Upgrades')
 def init_tab_1(tab):
-    tab.append_button("Button 1", lambda: print("Button 1"))
-    tab.append_button("Button 2 | 20K", lambda: print("Button 2"))
-
+    tab.append(EZLabel())
+    for i in range(4):
+        tab.append(EZLabel("\n" if i>0 else ""), margin=5)
+        tab.append_button(f"Upgrade for {f2str(game.money_upgrades_cost[i])}$", (lambda h: lambda: game.buy_upgrade(h))(i), margin=3) # this is somehow not the worse line i have ever written
 
 @tab_update
 def update_tab_1(tab):
-    pass
+    tab[0].text = f"$/Step : {f2str((game.money_upgrades[0]+1)*game.money_upgrades_mult[0])}"
+    tab[1].text= f"Increase your $/step by {f2str(game.money_upgrades_mult[0])}"
+    for i in range(1,4):
+        tab[i*2+1].text = f"Autobuy {f2str(game.money_upgrades[i] * game.money_upgrades_mult[i])} previous\nupgrades every step"
+    tab[8].label = f"Upgrade for {f2str(game.money_upgrades_cost[3])}$"
     
 @tab_init('Secret')
 def init_secret_tab(tab):
@@ -139,10 +161,11 @@ def update_secret_tab(tab):
 def update_screen():
     tabs[tab_index].scroll()
     tab_update_functions[tab_index](tabs[tab_index])
+    money_label.text = game.float_to_str(game.money)+"$"
     display.refresh()
 
 def configure_groups():
-    global tab_name, status_label, tabs, tab_index, tab_locked, TAB_COUNT
+    global tab_name, money_label, tabs, tab_index, tab_locked, TAB_COUNT
     display.root_group = displayio.Group()
     
     display.root_group.append(Rect(0, 20, 160, 108, fill=BG_COLOR))
@@ -155,7 +178,7 @@ def configure_groups():
     display.root_group.append(Rect(80, 0, 2, 20, fill=TEXT_COLOR))    
 
     tab_name = Label(FONT,text=tab_names[tab_index], max_characters=29, color=TEXT_COLOR)
-    money_label = Label(FONT,text=game.float_to_str(game.money) $", max_characters=29, color=TEXT_COLOR)
+    money_label = Label(FONT,text=game.float_to_str(game.money), max_characters=29, color=TEXT_COLOR)
     tab_name.y = 10
     tab_name.x = 10
     money_label.y = 10
@@ -250,7 +273,6 @@ while True:
             step_done = False
             game.step()
             update_screen()
-            print(game.steps)
         if accelerometer.acceleration[0] < -2:
             step_done = True
     # Checking buttons
@@ -286,6 +308,11 @@ while True:
             konami_index=0
         update_screen()
     
+    if display:
+        for sl in tabs[tab_index].scrolling_labels:
+            sl.update()
+        display.refresh()
+
     t = time.monotonic()
     if display and (t - last_used > 120 or (not tab_locked and buttons[B] and konami_index!=9)):
         disable_screen()

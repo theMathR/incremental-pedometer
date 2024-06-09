@@ -154,7 +154,7 @@ def update_durability(inventory, equipped):
             if s > r:
                 equipped[i]-=1
 
-def buy_upgrade(i,n=1): # i is the upgrade index, n is the number of upgrades to buy
+def buy_upgrade(i,n=1): # i is the upgrade index, n is the number of upgrades to buyF
     global money
     if i==3: return buy_upgrade_4()
     if i==4: return buy_upgrade_5()
@@ -285,7 +285,7 @@ UNITS = ['', 'Un', 'Du', 'Tr','Qa','Qi','Sx','Sp','Oc','No']
 DEC = ['','De','Vg','Tg','Qag','Qig','Sxg','Spg','Og','Ng']
 CEN = ['','Ce'] # The maximum is 179.7 UnCe (1.79e308)
 def float_to_str(f):
-    if f < 1e6: return '{:.1f}'.format(f)
+    if f < 1e6: return '{:.0f}'.format(f)
     if notation == 0: return '{:.2g}'.format(f)
     N = math.floor(math.log(f,10)/3)
     number_part = f / (1000**N)
