@@ -155,7 +155,7 @@ def configure_groups():
     display.root_group.append(Rect(80, 0, 2, 20, fill=TEXT_COLOR))    
 
     tab_name = Label(FONT,text=tab_names[tab_index], max_characters=29, color=TEXT_COLOR)
-    money_label = Label(FONT,text="3,4e128 $", max_characters=29, color=TEXT_COLOR)
+    money_label = Label(FONT,text=game.float_to_str(game.money) $", max_characters=29, color=TEXT_COLOR)
     tab_name.y = 10
     tab_name.x = 10
     money_label.y = 10
