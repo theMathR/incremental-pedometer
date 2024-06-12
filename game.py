@@ -245,6 +245,10 @@ def change_notation():
     global notation
     notation = (notation+1)%3
 
+def change_theme(l):
+    global theme_index
+    theme_index = (theme_index+1)%l
+
 def reset_steps():
     global steps
     steps = 0

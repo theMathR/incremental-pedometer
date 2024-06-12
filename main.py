@@ -37,7 +37,7 @@ FONT = terminalio.FONT
 FONT_SIZE = FONT.get_bounding_box()[1]
 
 # Tabs
-
+tab_locked = False
 class Tab(displayio.Group):
     def __init__(self):
         super().__init__()
@@ -74,6 +74,10 @@ class Tab(displayio.Group):
 
     def scroll(self):
         if not self.buttons: return
+        if tab_locked:
+            if buttons[A]:
+                self.close_popup()
+            return
         if buttons[UP]:
             if self.button_index==0 and self.y != 0:
                 self.y=0
@@ -92,6 +96,26 @@ class Tab(displayio.Group):
         if buttons[A]:
             self.button_functions[self.button_index]()
 
+    def create_popup(self, text):
+        global tab_locked
+        tab_locked = True
+        popup = displayio.Group()
+        popup.x=12
+        popup.y=11
+        popup.append(Label(FONT, text=text, color=theme[2], x=4, y=35))
+        button = Button(x=4, y=60, height=20, label=text, width=128, label_font=FONT,
+            label_color=theme[2], fill_color=theme[1], outline_color=theme[2],
+            selected_label=theme[1], selected_fill=theme[3], selected_outline=theme[2])
+        button.selected = True
+        popup.append(button)
+        tab_container.append(Rect(12, 11, 135, 86, fill=theme[0], outline=theme[2], stroke=2))
+        tab_container.append(popup)
+    
+    def close_popup(self):
+        global tab_locked
+        tab_locked = False
+        tab_container.pop()
+        tab_container.pop()
 
 menu_index = 0
 tab_init_functions = []
@@ -147,7 +171,7 @@ def update_upgrades_tab():
 
 @tab_init('Feet')
 def init_settings_tab():
-    pass
+    tab.append_button('Test', lambda: tab.create_popup('test!'))
 
 @tab_update
 def update_settings_tab():
@@ -220,8 +244,7 @@ def update_screen():
     display.refresh()
 
 def change_theme():
-    game.theme_index += 1
-    game.theme_index %= len(themes)
+    game.change_theme(len(themes))
     buttons[A] = False
     configure_groups()
 
