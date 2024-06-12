@@ -35,5 +35,6 @@
     "socks_equipped": [0,1],
     "notation": 2,
     "bears": 0,
-    "item_price": 1000
+    "item_price": 1000,
+    "theme": 0
 }

@@ -36,7 +36,7 @@ while True:
             f = open("upload_settings.txt","w")
             f.write(port)
             f.close()
-        files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib","assets"]
+        files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib","assets","themes.py"]
         with console.status("[bold green] Moving files ...") as status:
             while files:
                 file = files.pop(0)

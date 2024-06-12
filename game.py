@@ -107,6 +107,9 @@ with open('save.json','r') as save_file:
     
     item_price = save['item_price']
     bears = save['bears']
+    
+    # Theme
+    theme_index = save['theme']
 
 money_upgrade_5_cost = 1e10
 money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds a certain value to its cost (which quickly becomes negligible) except for U4 which is multiplied (exponential price)
@@ -275,6 +278,7 @@ def save():
         for s in socks],
         'bears': bears,
         'item_price': item_price,
+        'theme': theme,
     }
     with open('save.json', 'w') as save_file:
         json.dump(save, save_file)
