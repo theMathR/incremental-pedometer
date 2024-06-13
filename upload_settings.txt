@@ -1,1 +1,1 @@
-/run/media/spectralo/CIRCUITPY/
+/media/mathr/CIRCUITPY/

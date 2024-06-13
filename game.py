@@ -128,7 +128,7 @@ def step():
     # Apply shoe effects
     money_upgrades_mult = [1.0, 1.0, 1.0, 1.0] # Multipliers are reset to be recalculated
     for i in range(feet):
-        shoe, sock = shoes[shoes_equipped[i]] if shoes_equipped[i] else Nothing(), socks[socks_equipped[i]] if socks_equipped[i] else Nothing()
+        shoe, sock = shoes[shoes_equipped[i]] if isinstance(shoes_equipped[i], int) else Nothing(), socks[socks_equipped[i]] if isinstance(socks_equipped[i], int) else Nothing()
         shoe.apply_effect(sock.boost)
     
     # Create money based on U1

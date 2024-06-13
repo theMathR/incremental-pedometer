@@ -65,7 +65,8 @@ class Tab(displayio.Group):
         self.append(b, margin=margin)
         self.button_functions.append(f)
 
-    def append_button(self, text, function, height=20, margin=2):
+    def append_button(self, text, function, height=20, margin=None):
+        if margin is None: margin = 1 if isinstance(tab[-1], Button) else 2
         self._append_button(
             Button(x=0, y=0, height=height, label=text, width=160, label_font=FONT,
             label_color=theme[2], fill_color=theme[1], outline_color=theme[2],
@@ -103,7 +104,7 @@ class Tab(displayio.Group):
         popup.x=12
         popup.y=11
         popup.append(Label(FONT, text=text, color=theme[2], x=4, y=35))
-        button = Button(x=4, y=60, height=20, label=text, width=128, label_font=FONT,
+        button = Button(x=3, y=62, height=20, label='Close', width=129, label_font=FONT,
             label_color=theme[2], fill_color=theme[1], outline_color=theme[2],
             selected_label=theme[1], selected_fill=theme[3], selected_outline=theme[2])
         button.selected = True
@@ -155,10 +156,9 @@ def init_upgrades_tab():
     tab.append(EZLabel())
     for i in range(4):
         tab.append(EZLabel("\n" if i>0 else ""), margin=5)
-        tab.append_button(f"Upgrade for {f2str(game.money_upgrades_cost[i])}$", (lambda h: lambda: game.buy_upgrade(h))(i), margin=3) # this is somehow not the worse line i have ever written
-    
+        tab.append_button(f"Upgrade for {f2str(game.money_upgrades_cost[i])}$", check_money((lambda h: lambda: game.buy_upgrade(h))(i)), margin=3) # this is somehow not the worse line i have ever written
     tab.append(EZLabel("Autobuy previous upgrade when\naffordable" if i>0 else ""), margin=5)
-    tab.append_button(f"Buy for {f2str(game.money_upgrades_cost[i])}$", game.buy_upgrade_5, margin=3)
+    tab.append_button(f"Buy for {f2str(game.money_upgrades_cost[i])}$", check_money(game.buy_upgrade_5), margin=3)
 
 @tab_update
 def update_upgrades_tab():
@@ -171,7 +171,11 @@ def update_upgrades_tab():
 
 @tab_init('Feet')
 def init_settings_tab():
-    tab.append_button('Test', lambda: tab.create_popup('test!'))
+    tab.append(EZLabel(f'You have {game.feet} feet.'))
+    for i in range(game.feet):
+        tab.append_button("Sock: " + (game.socks[game.socks_equipped[i]].name if isinstance(game.socks_equipped[i], int) else "Nothing"), lambda:0, margin=5)
+        tab.append_button("Shoe: " + (game.shoes[game.shoes_equipped[i]].name if isinstance(game.shoes_equipped[i], int) else "Nothing"), lambda:0)
+    tab.append_button(f'New foot for {f2str(game.foot_price)}', do_then_update(check_money(game.buy_foot)), margin=5)
 
 @tab_update
 def update_settings_tab():
@@ -247,6 +251,26 @@ def change_theme():
     game.change_theme(len(themes))
     buttons[A] = False
     configure_groups()
+
+def do_then_update(func):
+    def wrapped():
+        global tab
+        buttons[A] = False
+        if not func(): return
+        tab_container.pop()
+        tab = Tab()
+        tab_container.append(tab)
+        tab_init_functions[tab_index]()
+        update_screen()
+    return wrapped
+
+def check_money(func):
+    def wrapped():
+        v = func()
+        if not v:
+            tab.create_popup("You don't have\nenough money!")
+        return v
+    return wrapped
 
 def configure_groups():
     global tab_name, money_label, tab, tab_container, tab_index, tab_locked, TAB_COUNT, theme
