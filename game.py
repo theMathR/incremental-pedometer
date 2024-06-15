@@ -161,8 +161,8 @@ def buy_money_upgrade(n=1):
     global money, money_upgrades, money_upgrades_price
     money_upgrades_price = 100+money_upgrades*150
     for i in range(n):
-        if money<price: return False
-        money -= price
+        if money<money_upgrades_price: return False
+        money -= money_upgrades_price
         money_upgrades += 1
         money_upgrades_price = 100+money_upgrades*150
     return True
@@ -276,7 +276,6 @@ def reset_steps():
     steps = 0
 
 def save():
-    return
     save = {
         'steps': steps,
         'total_steps': total_steps,
