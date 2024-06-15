@@ -118,7 +118,6 @@ class Tab(displayio.Group):
         tab_container.pop()
         tab_container.pop()
 
-menu_index = 0
 tab_init_functions = []
 tab_names = []
 def tab_init(name):
@@ -151,23 +150,21 @@ def update_steps_tab():
     tab[2].text=f"Total: {game.total_steps} ({game.total_steps*0.037} calories)"
 
 
-@tab_init('Upgrades')
-def init_upgrades_tab():
-    tab.append(EZLabel())
-    for i in range(4):
-        tab.append(EZLabel("\n" if i>0 else ""), margin=5)
-        tab.append_button(f"Upgrade for {f2str(game.money_upgrades_cost[i])}$", check_money((lambda h: lambda: game.buy_upgrade(h))(i)), margin=3) # this is somehow not the worse line i have ever written
-    tab.append(EZLabel("Autobuy previous upgrade when\naffordable" if i>0 else ""), margin=5)
-    tab.append_button(f"Buy for {f2str(game.money_upgrades_cost[i])}$", check_money(game.buy_upgrade_5), margin=3)
+@tab_init('Money')
+def init_money_tab():
+    tab.append(EZLabel(f"You gain {f2str(game.money_gained)} $/step"))
+    
+    tab.append(EZLabel(f'You have {f2str(game.money_upgrades)}\n money upgrades'), margin=5)
+    tab.append_button(f'Buy one for {f2str(game.money_upgrade_price)}$', do_then_update(game.buy_money_upgrade))
+    
+    tab.append(EZLabel(f"Your energy is at {f2str(game.energy)}%"), margin=5)
+    tab.append_button(f'Eat a cereal bar for 1000$', game.buy_cereal_bar)
 
 @tab_update
-def update_upgrades_tab():
-    tab[0].text = f"$/Step : {f2str((game.money_upgrades[0]+1)*game.money_upgrades_mult[0])}"
-    tab[1].text= f"Increase your $/step by {f2str(game.money_upgrades_mult[0])}"
-    for i in range(1,4):
-        tab[i*2+1].text = f"Autobuy {f2str(game.money_upgrades[i] * game.money_upgrades_mult[i])} previous\nupgrades every step"
-    tab[8].label = f"Upgrade for {f2str(game.money_upgrades_cost[3])}$"
-    if game.money_upgrade_5: tab[-1].label = "Bought"
+def update_money_tab():
+    tab[0].text = f"You gain {f2str(game.money_gained)} $/step"
+    tab[1].text = f'You have {f2str(game.money_upgrades)}\n money upgrades'
+    tab[3].text = f"Your energy is at {f2str(game.energy)}%"
 
 @tab_init('Feet')
 def init_settings_tab():
@@ -182,22 +179,6 @@ def update_settings_tab():
     pass
 
 @tab_init('Inventory')
-def init_settings_tab():
-    pass
-
-@tab_update
-def update_settings_tab():
-    pass
-
-@tab_init('Elements')
-def init_settings_tab():
-    pass
-
-@tab_update
-def update_settings_tab():
-    pass
-
-@tab_init('Challenges')
 def init_settings_tab():
     pass
 
@@ -336,6 +317,14 @@ def disable_screen():
     display_bus.deinit()
     display = None
 
+def save():
+    try:
+        storage.remount('/', readonly=False)
+        game.save()
+        storage.remount('/', readonly=True)
+    except RuntimeError:
+        print('USB enabled, save skipped')
+
 # Accelerometer part
 
 accelerometer = ADXL345(I2C(scl=board.GP17, sda=board.GP16))
@@ -397,26 +386,27 @@ while True:
     if True in buttons:
         last_used = time.monotonic()
         if display == None:
+            buttons = [False]*6
             enable_screen()
-            menu_index = 0
-        elif not tab_locked:
-            move = 0
-            if buttons[LEFT]:
-                move = -1
-            if buttons[RIGHT]:
-                move = 1
-            if move != 0:
-                tab_index = (tab_index+move)%TAB_COUNT
-                switch_tab()
-        if buttons[konami_code[konami_index]]:
-            konami_index+=1
-            if konami_index == 10:
-                tab_index = -1
-                switch_tab()
+        else:
+            if not tab_locked:
+                move = 0
+                if buttons[LEFT]:
+                    move = -1
+                if buttons[RIGHT]:
+                    move = 1
+                if move != 0:
+                    tab_index = (tab_index+move)%TAB_COUNT
+                    switch_tab()
+            if buttons[konami_code[konami_index]]:
+                konami_index+=1
+                if konami_index == 10:
+                    tab_index = -1
+                    switch_tab()
+                    konami_index=0
+            else: 
                 konami_index=0
-        else: 
-            konami_index=0
-        update_screen()
+            update_screen()
     
     if display:
         for sl in tab.scrolling_labels:
@@ -425,12 +415,8 @@ while True:
 
     t = time.monotonic()
     if display and (t - last_used > 120 or (not tab_locked and buttons[B] and konami_index!=9)):
+        save()
         disable_screen()
     if t - last_saved > 60:
         last_saved = t
-        try:
-            storage.remount('/', readonly=False)
-            game.save()
-            storage.remount('/', readonly=True)
-        except RuntimeError:
-            print('USB enabled, save skipped')
+        save()

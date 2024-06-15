@@ -1,8 +1,8 @@
-# i'm bad at coding
 import math, random, json
 
-# TODO: Fix saving
+# TODO: SAVING
 
+# Useful random function
 def gauss(mu=0,sigma=1):
     while True:
         u = random.uniform(-1,1)
@@ -11,22 +11,24 @@ def gauss(mu=0,sigma=1):
         if s >= 1: continue
         return mu + sigma*math.sqrt(-2*math.log(s)/s)
 
-
 class Item:
     def __init__(self, level=1, data=0, durability=int(750000+1000*gauss(mu=0,sigma=15))):
         self.level = level
         self.data = data
         self.durability = durability
 
+
 class Shoe(Item): pass
 class Sock(Item): pass
 
 class Nothing:
+    power=False
     def apply_effect(self, multiplier=1): pass
     boost = 1
 
 class BasicShoe(Shoe):
     i=0
+    power=False
     @property
     def name(self): return "Basic shoe"
     
@@ -34,11 +36,12 @@ class BasicShoe(Shoe):
     def description(self): return "Multiplies money/step by {:.3f}".format(math.log(self.level,100)+1)
     
     def apply_effect(self, multiplier=1):
-        money_upgrades_mult[0] *= (1+math.log(self.level,100))*multiplier
+        money_step *= (1+math.log(self.level,100))*multiplier
 
 
 class BasicSock(Sock):
     i=1
+    power=False
     @property
     def name(self): return "Basic sock"
     
@@ -74,23 +77,25 @@ TIERS = [
 ] 
 
 with open('save.json','r') as save_file:
+    
+    muscles=money_upgrades=money_gained=nb_orpheus=training_mode=energy_orpheus=0
+    money_upgrades_autobuyers=cereal_bar_autobuyers=apple_autobuyers=0
+    money_upgrade_price = 100
+    energy = energy_orpheus = 100
+    
     save = json.load(save_file)
 
     steps = save['steps']
     total_steps = save['total_steps']
 
     money = save['money']
-
-    # The first upgrade is the amount of money/step
-    # The others autobuy the previous upgrade
-    # You can only have 1 upgrade 5 since it is only possible to afford 1 U4
-    money_upgrades = save['money_upgrades']
-    money_upgrades_cost = save['money_upgrades_cost']
-    money_upgrade_5 = save['money_upgrade_5'] # Separated because there can be only 1
-
+    
+    #money_step_upgrades = save['money_step_upgrades']
+    
+    #energy = save['energy']
 
     feet = save['feet']
-    foot_price = save['foot_price']
+    foot_price=1000
 
     # Contain index numbers to the shoes/socks in the previous lists
     shoes_equipped = save['shoes_equipped']
@@ -105,39 +110,34 @@ with open('save.json','r') as save_file:
     shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']]
     socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']]
     
-    item_price = save['item_price']
+    #items_bought = save['items_bought']
     bears = save['bears']
     
     # Theme
     theme_index = save['theme']
 
-money_upgrade_5_cost = 1e10
-money_upgrades_cost_increase = [1.0, 1e2, 1e4, 100.0] # Each upgrade bought adds a certain value to its cost (which quickly becomes negligible) except for U4 which is multiplied (exponential price)
-foot_price_increase = 1.3
-money_upgrades_mult = [1.,1.,1.,1.] # Multipliers given by the shoes
-
-# TODO: Elements, challenges
-
 def step():
-    global money, money_upgrades_mult, steps, total_steps
+    global money, energy, energy_orpheus, steps, total_steps, money_gained
+    
+    # TODO: Apply shoe effects
     
     # Count steps
     steps += 1
     total_steps += 1
     
-    # Apply shoe effects
-    money_upgrades_mult = [1.0, 1.0, 1.0, 1.0] # Multipliers are reset to be recalculated
-    for i in range(feet):
-        shoe, sock = shoes[shoes_equipped[i]] if isinstance(shoes_equipped[i], int) else Nothing(), socks[socks_equipped[i]] if isinstance(socks_equipped[i], int) else Nothing()
-        shoe.apply_effect(sock.boost)
+    # Get money
+    money_gained = (1+money_upgrades * (energy/100)**(1/4)) * (1 + nb_orpheus * (energy_orpheus/100)**(1/8))
+    money += money_gained
+    energy -= ((1+money_upgrades/200)/5) * (1.5 if training_mode else 1)
+    if energy < 0: energy = 0
+    if nb_orpheus:
+        energy_orpheus -= (1+money_upgrades/200)/10
+        if energy_orpheus < 0: energy_orpheus = 0
     
-    # Create money based on U1
-    money += (1+money_upgrades[0]) * money_upgrades_mult[0]
-    
-    # Each upgrade except U1 autobuys the one before
-    for i in range(3):
-        buy_upgrade(i, money_upgrades[i+1] * money_upgrades_mult[i+1])
-    if money_upgrade_5: buy_upgrade_4()
+    # Use autobuyers
+    buy_money_upgrade(n=money_upgrades_autobuyers)
+    buy_cereal_bar(n=cereal_bar_autobuyers)
+    buy_apple(n=apple_autobuyers)
     
     # Update item durability
     update_durability(shoes,shoes_equipped)
@@ -157,42 +157,65 @@ def update_durability(inventory, equipped):
             if s > r:
                 equipped[i]-=1
 
-def buy_upgrade(i,n=1): # i is the upgrade index, n is the number of upgrades to buyF
-    global money
-    if i==3: return buy_upgrade_4()
-    if i==4: return buy_upgrade_5()
-    
-    # Check number of upgrades we can afford
-    while money_upgrades_cost[i] * n > money:
-        n -= 1
-        if n == 0: return False
+def buy_money_upgrade(n=1):
+    global money, money_upgrades, money_upgrades_price
+    money_upgrades_price = 100+money_upgrades*150
+    for i in range(n):
+        if money<price: return False
+        money -= price
+        money_upgrades += 1
+        money_upgrades_price = 100+money_upgrades*150
+    return True
         
-    # Buy!
-    cost = money_upgrades_cost[i] * n
-    money -= cost
-    money_upgrades[i] += n
+
+def buy_cereal_bar(n=1):
+    global money, energy
+    for i in range(n):
+        if money < 1000: return False
+        money -= 1000
+        energy = min(energy+(10 if training_mode else 20), 100+int(muscles))
     return True
 
-def buy_upgrade_4(): # Seperated because upgrade 4 works differently
-    global money
-    if money_upgrades_cost[3] > money: return False
-    money -= money_upgrades_cost[3]
-    money_upgrades_cost[3] *= money_upgrades_cost_increase[3]
-    money_upgrades[3] += 1
+def buy_apple(n=1):
+    global money, energy_orpheus
+    for i in range(n):
+        if money < 1000: return False
+        money -= 1000
+        energy_orpheus = min(100, energy_orpheus+20/nb_orpheus)
     return True
 
-def buy_upgrade_5(): # Same
-    global money, money_upgrade_5
-    if money_upgrade_5 or money_upgrade_5_cost > money: return False
-    money -= money_upgrade_5_cost
-    money_upgrade_5 = True
+def sacrifice():
+    global money, energy, money_upgrades, training_mode, muscles, feet, nb_orpheus, energy_orpheus
+    if money<123456789: return False
+    money = 0
+    energy = 100
+    money_upgrades = 0
+    training_mode = False
+    muscles = 0
+    feet = 2
+    while len(shoes_equipped)>2:
+        shoes_equipped.pop()
+        socks.equipped.pop()
+    energy_orpheus = 100
+    nb_orpheus *= 2
+    if nb_orpheus == 0: nb_orpheus = 1
     return True
+
+def toggle_training():
+    global training_mode, money, money_saved
+    if not training_mode:
+        money_saved = money
+        money = 0
+        training_mode = True
+    else:
+        money = money_saved
+        training_mode = False
 
 def buy_foot():
     global money, foot_price, feet
     if money < foot_price: return False
     money -= foot_price
-    foot_price **= foot_price_increase
+    foot_price **= 1.3
     feet += 1
     shoes.append(BasicShoe(1))
     socks.append(BasicSock(1))
@@ -200,12 +223,11 @@ def buy_foot():
     socks_equipped.append(len(socks)-1)
     return True
 
-item_price_multiplier = 1.05
 def buy_item():
     global money, item_price, bears
     if money < item_price: return False
     money -= item_price
-    item_price *= item_price_multiplier
+    item_price *= 1.05
     
     tier_rand = random.randint(1,16)
     if tier_rand <= 8:
@@ -254,15 +276,13 @@ def reset_steps():
     steps = 0
 
 def save():
+    return
     save = {
         'steps': steps,
         'total_steps': total_steps,
         'money': money,
-        'money_upgrades': money_upgrades,
-        'money_upgrades_cost': money_upgrades_cost,
-        'money_upgrade_5': money_upgrade_5,
+        'bears': bears,
         'feet': feet,
-        'foot_price': foot_price,
         'shoes_equipped': shoes_equipped,
         'socks_equipped': socks_equipped,
         'notation': notation,
@@ -281,7 +301,7 @@ def save():
             }
         for s in socks],
         'bears': bears,
-        'item_price': item_price,
+        'items_bought': items_bought,
         'theme': theme,
     }
     with open('save.json', 'w') as save_file:
