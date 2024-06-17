@@ -78,10 +78,14 @@ TIERS = [
 
 with open('save.json','r') as save_file:
     
-    muscles=money_upgrades=money_gained=nb_orpheus=training_mode=energy_orpheus=0
-    money_upgrades_autobuyers=cereal_bar_autobuyers=apple_autobuyers=0
-    money_upgrade_price = 100
-    energy = energy_orpheus = 100
+    muscles=money_upgrades=money_gained=nb_orpheus=training_mode=energy_orpheus=0.0
+    money_upgrades_autobuyers=cereal_bar_autobuyers=apple_autobuyers=0.0
+    money_upgrades_autobuyer_price,cereal_bar_autobuyer_price,apple_autobuyer_price=1000.0,1000.0,100000.0
+    money_upgrades_autobuyers_on = True
+    money_upgrade_price = 100.0
+    sacrifice_price=123456789.0
+    energy = energy_orpheus = 100.0
+    training_mode_unlocked = False
     
     save = json.load(save_file)
 
@@ -95,7 +99,7 @@ with open('save.json','r') as save_file:
     #energy = save['energy']
 
     feet = save['feet']
-    foot_price=1000
+    foot_price=1000.0
 
     # Contain index numbers to the shoes/socks in the previous lists
     shoes_equipped = save['shoes_equipped']
@@ -135,13 +139,20 @@ def step():
         if energy_orpheus < 0: energy_orpheus = 0
     
     # Use autobuyers
-    buy_money_upgrade(n=money_upgrades_autobuyers)
-    buy_cereal_bar(n=cereal_bar_autobuyers)
-    buy_apple(n=apple_autobuyers)
+    if money_upgrades_autobuyers_on: buy_money_upgrade(n=money_upgrades_autobuyers)
+    buy_cereal_bar(n=min(cereal_bar_autobuyers, int(100+muscles - energy)/(10 if training_mode else 20)))
+    buy_apple(n=min(apple_autobuyers, (100-energy_orpheus)*nb_orpheus/20))
     
     # Update item durability
     update_durability(shoes,shoes_equipped)
     update_durability(socks,socks_equipped)
+
+def unlock_training_mode():
+    global money, training_mode_unlocked
+    if money < 5000: return False
+    money -= 5000
+    training_mode_unlocked = True
+    return True
 
 def update_durability(inventory, equipped):
     to_remove=[]
@@ -171,8 +182,8 @@ def buy_money_upgrade(n=1):
 def buy_cereal_bar(n=1):
     global money, energy
     for i in range(n):
-        if money < 1000: return False
-        money -= 1000
+        if money < 500: return False
+        money -= 500
         energy = min(energy+(10 if training_mode else 20), 100+int(muscles))
     return True
 
@@ -184,31 +195,67 @@ def buy_apple(n=1):
         energy_orpheus = min(100, energy_orpheus+20/nb_orpheus)
     return True
 
+def buy_money_upgrades_autobuyer():
+    global money, money_upgrades_autobuyers, money_upgrades_autobuyer_price
+    if money < money_upgrades_autobuyer_price: return False
+    money -= money_upgrades_autobuyer_price
+    money_upgrades_autobuyer_price += 1000
+    money_upgrades_autobuyers+=1
+    return True
+
+def buy_cereal_bar_autobuyer():
+    global money, cereal_bar_autobuyers, cereal_bar_autobuyer_price
+    if money < cereal_bar_autobuyer_price: return False
+    money -= cereal_bar_autobuyer_price
+    cereal_bar_autobuyer_price += 1000
+    cereal_bar_autobuyers+=1
+    return True
+
+def buy_apple_autobuyer():
+    global money, apple_autobuyers, apple_autobuyer_price
+    if money < apple_autobuyer_price: return False
+    money -= apple_autobuyer_price
+    apple_autobuyer_price += 1000
+    apple_autobuyers+=1
+    return True
+
+def toggle_money_upgrades_autobuyers():
+    global money_upgrades_autobuyers_on
+    money_upgrades_autobuyers_on = not money_upgrades_autobuyers_on
+    return True
+
 def sacrifice():
-    global money, energy, money_upgrades, training_mode, muscles, feet, nb_orpheus, energy_orpheus
-    if money<123456789: return False
+    global money, energy, money_upgrades, training_mode, muscles, feet, nb_orpheus, energy_orpheus, sacrifice_price
+    if money<sacrifice_price: return False
     money = 0
     energy = 100
     money_upgrades = 0
     training_mode = False
     muscles = 0
     feet = 2
+    training_mode_unlocked = False
+    money_upgrades_autobuyers = cereal_bar_autobuyers = 0
     while len(shoes_equipped)>2:
         shoes_equipped.pop()
         socks.equipped.pop()
     energy_orpheus = 100
     nb_orpheus *= 2
+    sacrifice_price += 1234565789
     if nb_orpheus == 0: nb_orpheus = 1
     return True
 
+def money_to_muscles():
+    return int(math.log10(money))
+
 def toggle_training():
-    global training_mode, money, money_saved
+    global training_mode, money, money_saved, muscles
     if not training_mode:
         money_saved = money
         money = 0
         training_mode = True
     else:
         money = money_saved
+        muscles = money_to_muscles()
         training_mode = False
 
 def buy_foot():

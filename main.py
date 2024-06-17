@@ -158,7 +158,8 @@ def init_money_tab():
     tab.append_button(f'Buy one for {f2str(game.money_upgrade_price)}$', do_then_update(game.buy_money_upgrade))
     
     tab.append(EZLabel(f"Your energy is at {f2str(game.energy)}%"), margin=5)
-    tab.append_button(f'Eat a cereal bar for 1000$', game.buy_cereal_bar)
+    tab.append(EZLabel(f"You lose energy every step\nand it reduces your money gain"))
+    tab.append_button(f'Eat a cereal bar for 500$', game.buy_cereal_bar)
 
 @tab_update
 def update_money_tab():
@@ -166,8 +167,25 @@ def update_money_tab():
     tab[1].text = f'You have {f2str(game.money_upgrades)}\n money upgrades'
     tab[3].text = f"Your energy is at {f2str(game.energy)}%"
 
+@tab_init('Autobuyers')
+def init_autobuyers_tab():
+    tab.append(EZLabel(f'You have {game.money_upgrades_autobuyers}\nmoney upgrade autobuyers'))
+    tab.append_button(f'Buy one for {f2str(game.money_upgrades_autobuyer_price)}$', do_then_update(check_money(game.buy_money_upgrades_autobuyer)))
+    tab.append_button(f'Press to turn {"off" if game.money_upgrades_autobuyers_on else "on"}', do_then_update(game.toggle_money_upgrades_autobuyers))
+    
+    tab.append(EZLabel(f'You have {game.cereal_bar_autobuyers}\nmoney upgrade autobuyers'), margin=5)
+    tab.append_button(f'Buy one for {f2str(game.cereal_bar_autobuyer_price)}$', do_then_update(check_money(game.buy_cereal_bar_autobuyer)))
+    
+    if not game.nb_orpheus: return
+    tab.append(EZLabel(f'You have {game.apple_autobuyers}\napple autobuyers'), margin=5)
+    tab.append_button(f'Buy one for {f2str(game.apple_autobuyer_price)}$', do_then_update(check_money(game.buy_apple_autobuyer)))
+
+@tab_update
+def update_autobuyers_tab():
+    pass
+
 @tab_init('Feet')
-def init_settings_tab():
+def init_feet_tab():
     tab.append(EZLabel(f'You have {game.feet} feet.'))
     for i in range(game.feet):
         tab.append_button("Sock: " + (game.socks[game.socks_equipped[i]].name if isinstance(game.socks_equipped[i], int) else "Nothing"), lambda:0, margin=5)
@@ -175,16 +193,49 @@ def init_settings_tab():
     tab.append_button(f'New foot for {f2str(game.foot_price)}', do_then_update(check_money(game.buy_foot)), margin=5)
 
 @tab_update
-def update_settings_tab():
-    pass
+def update_feet_tab():
+    pass # TODO: Change equipped feet
 
 @tab_init('Inventory')
-def init_settings_tab():
+def init_inventory_tab():
     pass
 
 @tab_update
-def update_settings_tab():
+def update_inventory_tab():
     pass
+
+@tab_init('Training')
+def init_training_tab():
+    if not game.training_mode_unlocked:
+        tab.append_button('Unlock for 5000$', do_then_update(check_money(game.unlock_training_mode)))
+        return
+    tab.append(EZLabel('In training mode\nenergy is way more\npunishing.\nGet as much money\nas possible to\nmake the energy limit higher!'))
+    tab.append(EZLabel(f'Current max energy: {f2str(100+game.muscles)}%'))
+    tab.append_button('Enter training mode', do_then_update(game.toggle_training_mode))
+
+@tab_update
+def update_training_tab():
+    if game.training_mode:
+        tab[2].label = f"Stop for +{f2str(game.money_to_muscles()-game.muscles)}%"
+
+@tab_init('Orpheus')
+def init_orpheus_tab():
+    tab.append(EZLabel('Sacrificing will\nreset your entire\nprogression except\n your items.\nIn exchange you summon\nOrpheus who will\nboost your production!'))
+    tab.append_button(f'Sacrifice for {f2str(game.sacrifice_price)}$', do_then_update(check_money(game.sacrifice)))
+    
+    if not game.nb_orpheus: return
+    tab.append(EZLabel(f'Orpheus count: {f2str(nb_orpheus)}'))
+    
+    tab.append(EZLabel(f"Their energy is at {f2str(game.energy_orpheus)}%"), margin=5)
+    tab.append_button('Give them an apple for 1000$', game.buy_apple)
+    
+    # TODO: Les sprites d'Orpheus!
+    # N'oublie pas de rajouter une limite car il va en avoir de + en +
+
+@tab_update
+def update_orpheus_tab():
+    if game.nb_orpheus:
+        tab[-2].text = f"Their energy is at {f2str(game.energy_orpheus)}%"
 
 @tab_init('Settings')
 def init_settings_tab():
@@ -197,14 +248,6 @@ def init_settings_tab():
 def update_settings_tab():
     tab[0].text = f'Theme: {theme_names[game.theme_index]}'
     tab[2].text = f'Notation: {["Scientific","Standard","Mixed scientific"][game.notation]}'
-
-@tab_init('Help')
-def init_settings_tab():
-    pass
-
-@tab_update
-def update_settings_tab():
-    pass
 
 @tab_init('Secret')
 def init_secret_tab():
@@ -237,9 +280,11 @@ def do_then_update(func):
     def wrapped():
         global tab
         buttons[A] = False
+        i = tab.button_index
         if not func(): return
         tab_container.pop()
         tab = Tab()
+        tab.button_index = i
         tab_container.append(tab)
         tab_init_functions[tab_index]()
         update_screen()
