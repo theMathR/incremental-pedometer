@@ -40,6 +40,7 @@ FONT_SIZE = FONT.get_bounding_box()[1]
 tab_locked = False
 class Tab(displayio.Group):
     def __init__(self):
+        self.popup_open = False
         super().__init__()
         self.button_index = 0
         self.buttons = []
@@ -66,7 +67,7 @@ class Tab(displayio.Group):
         self.button_functions.append(f)
 
     def append_button(self, text, function, height=20, margin=None):
-        if margin is None: margin = 1 if isinstance(tab[-1], Button) else 2
+        if margin is None: margin = 1 if len(tab) and isinstance(tab[-1], Button) else 2
         self._append_button(
             Button(x=0, y=0, height=height, label=text, width=160, label_font=FONT,
             label_color=theme[2], fill_color=theme[1], outline_color=theme[2],
@@ -75,7 +76,7 @@ class Tab(displayio.Group):
 
     def scroll(self):
         if not self.buttons: return
-        if tab_locked:
+        if self.popup_open:
             if buttons[A]:
                 self.close_popup()
             return
@@ -99,6 +100,7 @@ class Tab(displayio.Group):
 
     def create_popup(self, text):
         global tab_locked
+        self.popup_open = True
         tab_locked = True
         popup = displayio.Group()
         popup.x=12
@@ -114,6 +116,7 @@ class Tab(displayio.Group):
     
     def close_popup(self):
         global tab_locked
+        self.popup_open = False
         tab_locked = False
         tab_container.pop()
         tab_container.pop()
@@ -184,13 +187,45 @@ def init_autobuyers_tab():
 def update_autobuyers_tab():
     pass
 
+item_select_info = None
+
+def begin_selection(index, sock_or_shoe):
+    def wrapped():
+        global item_select_info, tab_locked
+        if len(game.socks if sock_or_shoe == game.SOCK else game.shoes) == 0:
+            tab.create_popup(f'You don\'t have any {"sock" if item_select_info[1] == game.SOCK else "shoe"}s!')
+            return False
+        tab_locked = True
+        item_select_info = [index, sock_or_shoe]
+        game.equip(sock_or_shoe, None, index)
+        return True
+    return do_then_update(wrapped)
+
+def select_item(index):
+    def wrapped():
+        global item_select_info, tab_locked
+        game.equip(item_select_info[1], index, item_select_info[0])
+        tab_locked = False
+        item_select_info = None
+        return True
+    return do_then_update(wrapped)
+
 @tab_init('Feet')
 def init_feet_tab():
-    tab.append(EZLabel(f'You have {game.feet} feet.'))
-    for i in range(game.feet):
-        tab.append_button("Sock: " + (game.socks[game.socks_equipped[i]].name if isinstance(game.socks_equipped[i], int) else "Nothing"), lambda:0, margin=5)
-        tab.append_button("Shoe: " + (game.shoes[game.shoes_equipped[i]].name if isinstance(game.shoes_equipped[i], int) else "Nothing"), lambda:0)
-    tab.append_button(f'New foot for {f2str(game.foot_price)}', do_then_update(check_money(game.buy_foot)), margin=5)
+    if item_select_info is None:
+        tab.append(EZLabel(f'You have {game.feet} feet.'))
+        for i in range(game.feet):
+            tab.append_button("Sock: " + (game.socks[game.socks_equipped[i]].name if isinstance(game.socks_equipped[i], int) else "Nothing"),
+                begin_selection(i, game.SOCK), margin=5)
+            tab.append_button("Shoe: " + (game.shoes[game.shoes_equipped[i]].name if isinstance(game.shoes_equipped[i], int) else "Nothing"),
+                begin_selection(i, game.SHOE))
+        tab.append_button(f'New foot for {f2str(game.foot_price)}$', do_then_update(check_money(game.buy_foot)), margin=5)
+    else:
+        tab.append(EZLabel(f'Select a {"sock" if item_select_info[1] == game.SOCK else "shoe"}:'))
+        for i, item in enumerate(game.socks if item_select_info[1] == game.SOCK else game.shoes):
+            if i in (game.socks_equipped if item_select_info[1] == game.SOCK else game.shoes_equipped):
+                continue
+            tab.append_button(item.name, select_item(i))
 
 @tab_update
 def update_feet_tab():
@@ -284,9 +319,9 @@ def do_then_update(func):
         if not func(): return
         tab_container.pop()
         tab = Tab()
-        tab.button_index = i
         tab_container.append(tab)
         tab_init_functions[tab_index]()
+        tab.button_index = min(len(tab.buttons)-1, i)
         update_screen()
     return wrapped
 
@@ -459,7 +494,7 @@ while True:
         display.refresh()
 
     t = time.monotonic()
-    if display and (t - last_used > 120 or (not tab_locked and buttons[B] and konami_index!=9)):
+    if display and not tab_locked and (t - last_used > 120 or (buttons[B] and konami_index!=9)):
         save()
         disable_screen()
     if t - last_saved > 60:

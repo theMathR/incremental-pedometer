@@ -30,7 +30,7 @@ class BasicShoe(Shoe):
     i=0
     power=False
     @property
-    def name(self): return "Basic shoe"
+    def name(self): return f"Basic shoe LV{self.level}"
     
     @property
     def description(self): return "Multiplies money/step by {:.3f}".format(math.log(self.level,100)+1)
@@ -43,7 +43,7 @@ class BasicSock(Sock):
     i=1
     power=False
     @property
-    def name(self): return "Basic sock"
+    def name(self): return f"Basic sock LV{self.level}"
     
     @property
     def description(self): return "Boost shoe depending only on level (x{:.3f})".format(math.log(self.level,1000)+1)
@@ -164,7 +164,7 @@ def update_durability(inventory, equipped):
         inventory.pop(r)
         for i,s in enumerate(equipped):
             if r == s:
-                equipped[i]=False
+                equipped[i]=None
             if s > r:
                 equipped[i]-=1
 
