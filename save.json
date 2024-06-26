@@ -15,11 +15,6 @@
             "type": 0,
             "level": 1,
             "data": 0
-        },
-        {
-            "type": 0,
-            "level": 100,
-            "data": 0
         }
     ],
     "socks": [
@@ -41,5 +36,6 @@
     "notation": 2,
     "bears": 0,
     "item_price": 1000,
-    "theme": 2
+    "items_bought": [],
+    "theme": 0
 }

@@ -17,6 +17,9 @@ from adafruit_display_shapes.roundrect import RoundRect
 from adafruit_display_text.scrolling_label import ScrollingLabel
 from adafruit_button.button import Button
 
+import supervisor
+supervisor.runtime.autoreload = False
+
 f2str = game.float_to_str
 
 def EZLabel(text=""):
@@ -158,11 +161,11 @@ def init_money_tab():
     tab.append(EZLabel(f"You gain {f2str(game.money_gained)} $/step"))
     
     tab.append(EZLabel(f'You have {f2str(game.money_upgrades)}\n money upgrades'), margin=5)
-    tab.append_button(f'Buy one for {f2str(game.money_upgrade_price)}$', do_then_update(game.buy_money_upgrade))
+    tab.append_button(f'Buy one for {f2str(game.money_upgrade_price)}$', do_then_update(check_money(game.buy_money_upgrade)))
     
     tab.append(EZLabel(f"Your energy is at {f2str(game.energy)}%"), margin=5)
     tab.append(EZLabel(f"You lose energy every step\nand it reduces your money gain"))
-    tab.append_button(f'Eat a cereal bar for 500$', game.buy_cereal_bar)
+    tab.append_button(f'Eat a cereal bar for 500$', check_money(game.buy_cereal_bar))
 
 @tab_update
 def update_money_tab():
@@ -221,7 +224,7 @@ def init_feet_tab():
                 begin_selection(i, game.SHOE))
         tab.append_button(f'New foot for {f2str(game.foot_price)}$', do_then_update(check_money(game.buy_foot)), margin=5)
     else:
-        tab.append(EZLabel(f'Select a {"sock" if item_select_info[1] == game.SOCK else "shoe"}:'))
+        tab.append(EZLabel(f'Select a {"sock" if item_select_info[1] == game.SOCK else "shoe"} to equip:'))
         for i, item in enumerate(game.socks if item_select_info[1] == game.SOCK else game.shoes):
             if i in (game.socks_equipped if item_select_info[1] == game.SOCK else game.shoes_equipped):
                 continue
@@ -494,7 +497,7 @@ while True:
         display.refresh()
 
     t = time.monotonic()
-    if display and not tab_locked and (t - last_used > 120 or (buttons[B] and konami_index!=9)):
+    if display and (not tab_locked) and (t - last_used > 120 or (buttons[B] and konami_index!=9)):
         save()
         disable_screen()
     if t - last_saved > 60:

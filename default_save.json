@@ -36,5 +36,6 @@
     "notation": 2,
     "bears": 0,
     "item_price": 1000,
+    "items_bought": [],
     "theme": 0
 }

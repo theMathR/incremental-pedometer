@@ -22,13 +22,11 @@ class Shoe(Item): pass
 class Sock(Item): pass
 
 class Nothing:
-    power=False
     def apply_effect(self, multiplier=1): pass
     boost = 1
 
 class BasicShoe(Shoe):
     i=0
-    power=False
     @property
     def name(self): return f"Basic shoe LV{self.level}"
     
@@ -36,8 +34,7 @@ class BasicShoe(Shoe):
     def description(self): return "Multiplies money/step by {:.3f}".format(math.log(self.level,100)+1)
     
     def apply_effect(self, multiplier=1):
-        money_step *= (1+math.log(self.level,100))*multiplier
-
+        pass
 
 class BasicSock(Sock):
     i=1
@@ -114,7 +111,7 @@ with open('save.json','r') as save_file:
     shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']]
     socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']]
     
-    #items_bought = save['items_bought']
+    items_bought = save['items_bought']
     bears = save['bears']
     
     # Theme
