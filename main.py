@@ -236,7 +236,13 @@ def update_feet_tab():
 
 @tab_init('Inventory')
 def init_inventory_tab():
-    pass
+    tab.append(EZLabel('Click on an item to see \nits description'))
+    tab.append(EZLabel('Shoes:'), margin = 5)
+    for shoe in game.shoes:
+        tab.append_button(shoe.name, lambda: (tab.create_popup(shoe.name + ' :\n' + shoe.description)))
+    tab.append(EZLabel('Socks:'), margin = 5)
+    for sock in game.socks:
+        tab.append_button(sock.name, lambda: (tab.create_popup(sock.name + ' :\n' + sock.description)))
 
 @tab_update
 def update_inventory_tab():
