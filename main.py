@@ -14,7 +14,6 @@ from adafruit_display_shapes.rect import Rect
 from adafruit_display_text.label import Label
 from adafruit_display_text import LabelBase
 from adafruit_display_shapes.roundrect import RoundRect
-from adafruit_display_text.scrolling_label import ScrollingLabel
 from adafruit_button.button import Button
 
 import supervisor
@@ -22,31 +21,17 @@ supervisor.runtime.autoreload = False
 
 f2str = game.float_to_str
 
-# processing text
-
-def Concatenate(text):
-    textList = list(text.split(" "))
-    num = 0
-    for i in textList:
-        num += len(i)
-        if num > 20:
-            textList.insert(textList.index(i-1), "\n")
-            num = 0
-        
-
-
-
+def add_newlines(text):
+    words = text.split(" ")
+    lines = ['']
+    for w in words:
+        if len(lines[-1] + w) > 15:
+            lines.append('')
+        lines[-1] += w
+    return '\n'.join(lines)
 
 def EZLabel(text=""):
     return Label(FONT, text=text, color=theme[2], x=1)
-
-def EZScrollingLabel(text=""):
-    return ScrollingLabel(FONT, text=text, color=theme[2], x=1, max_characters=30)
-
-def set_scrolling_text(label, text):
-    c_i = label.current_index
-    label.full_text = text
-    label.current_index = c_i
 
 # Importants var
 TAB_COUNT = -1
@@ -62,12 +47,9 @@ class Tab(displayio.Group):
         super().__init__()
         self.button_index = 0
         self.buttons = []
-        self.scrolling_labels = []
         self.button_functions = []
     
     def append(self, g, margin=2):
-        if isinstance(g, ScrollingLabel):
-            self.scrolling_labels.append(g)
         if len(self) == 0:
             g.y = 0
         elif isinstance(self[-1], LabelBase):
@@ -123,7 +105,7 @@ class Tab(displayio.Group):
         popup = displayio.Group()
         popup.x=12
         popup.y=11
-        popup.append(Label(FONT, text=text, color=theme[2], x=4, y=35))
+        popup.append(Label(FONT, text=add_newlines(text), color=theme[2], x=4, y=35))
         button = Button(x=3, y=62, height=20, label='Close', width=129, label_font=FONT,
             label_color=theme[2], fill_color=theme[1], outline_color=theme[2],
             selected_label=theme[1], selected_fill=theme[3], selected_outline=theme[2])
@@ -237,7 +219,7 @@ def init_feet_tab():
                 begin_selection(i, game.SOCK), margin=5)
             tab.append_button("Shoe: " + (game.shoes[game.shoes_equipped[i]].name if isinstance(game.shoes_equipped[i], int) else "Nothing"),
                 begin_selection(i, game.SHOE))
-        tab.append_button(f'New foot for {f2str(game.foot_price)}$', do_then_update(check_money(game.buy_foot)), margin=5)
+        if game.feet < 9: tab.append_button(f'New foot for {f2str(game.foot_price)}$', do_then_update(check_money(game.buy_foot)), margin=5)
     else:
         tab.append(EZLabel(f'Select a {"sock" if item_select_info[1] == game.SOCK else "shoe"} to equip:'))
         for i, item in enumerate(game.socks if item_select_info[1] == game.SOCK else game.shoes):
@@ -252,10 +234,10 @@ def update_feet_tab():
 @tab_init('Inventory')
 def init_inventory_tab():
     tab.append(EZLabel('Click on an item to see \nits description'))
-    tab.append(EZLabel('Shoes:'), margin = 5)
+    tab.append(EZLabel(f'Shoes: ({len(game.shoes)}/10)'), margin = 5)
     for shoe in game.shoes:
         tab.append_button(shoe.name, lambda: (tab.create_popup(shoe.name + ' :\n' + shoe.description)))
-    tab.append(EZLabel('Socks:'), margin = 5)
+    tab.append(EZLabel(f'Socks: ({len(game.socks)}/10)'), margin = 5)
     for sock in game.socks:
         tab.append_button(sock.name, lambda: (tab.create_popup(sock.name + ' :\n' + sock.description)))
 
@@ -353,7 +335,7 @@ def check_money(func):
     def wrapped():
         v = func()
         if not v:
-            tab.create_popup("You don't have\nenough money!")
+            tab.create_popup("You don't have enough money!")
         return v
     return wrapped
 
@@ -511,11 +493,6 @@ while True:
             else: 
                 konami_index=0
             update_screen()
-    
-    if display:
-        for sl in tab.scrolling_labels:
-            sl.update()
-        display.refresh()
 
     t = time.monotonic()
     if display and (not tab_locked) and (t - last_used > 120 or (buttons[B] and konami_index!=9)):

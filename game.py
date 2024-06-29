@@ -1,17 +1,5 @@
 import math, random, json
 
-
-def add_newlines(text):
-    textList = text.split(" ")
-    num = 0
-    for i, t in enumerate(textList):
-        num += len(t)
-        if num > 20:
-            textList.insert(i, "\n")
-            num = 0
-    return ' '.join(textList)
-
-
 # Useful random function
 def gauss(mu=0,sigma=1):
     while True:
