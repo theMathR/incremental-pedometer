@@ -1,21 +1,16 @@
 import math, random, json
 
-# TODO: SAVING
 
-
-def Concatenate(text):
-    textList = list(text.split(" "))
+def add_newlines(text):
+    textList = text.split(" ")
     num = 0
-    for i in textList:
-        num += len(i)
+    for i, t in enumerate(textList):
+        num += len(t)
         if num > 20:
-            textList.insert(textList.index(i-1), "\n")
+            textList.insert(i, "\n")
             num = 0
+    return ' '.join(textList)
 
-    finalString = ""
-    for i in textList:
-        finalString += i + " "
-    return finalString
 
 # Useful random function
 def gauss(mu=0,sigma=1):
@@ -360,7 +355,7 @@ def save():
         for s in socks],
         'bears': bears,
         'items_bought': items_bought,
-        'theme': theme,
+        'theme': theme_index,
     }
     with open('save.json', 'w') as save_file:
         json.dump(save, save_file)
