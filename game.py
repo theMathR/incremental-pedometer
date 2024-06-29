@@ -2,6 +2,21 @@ import math, random, json
 
 # TODO: SAVING
 
+
+def Concatenate(text):
+    textList = list(text.split(" "))
+    num = 0
+    for i in textList:
+        num += len(i)
+        if num > 20:
+            textList.insert(textList.index(i-1), "\n")
+            num = 0
+
+    finalString = ""
+    for i in textList:
+        finalString += i + " "
+    return finalString
+
 # Useful random function
 def gauss(mu=0,sigma=1):
     while True:
@@ -31,7 +46,7 @@ class BasicShoe(Shoe):
     def name(self): return f"Basic shoe LV{self.level}"
     
     @property
-    def description(self): return "Multiplies money/step by {:.3f}".format(math.log(self.level,100)+1)
+    def description(self): return Concatenate("Multiplies money/step by {:.3f}".format(math.log(self.level,100)+1))
     
     def apply_effect(self, multiplier=1):
         pass

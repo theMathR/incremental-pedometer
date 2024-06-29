@@ -22,6 +22,21 @@ supervisor.runtime.autoreload = False
 
 f2str = game.float_to_str
 
+# processing text
+
+def Concatenate(text):
+    textList = list(text.split(" "))
+    num = 0
+    for i in textList:
+        num += len(i)
+        if num > 20:
+            textList.insert(textList.index(i-1), "\n")
+            num = 0
+        
+
+
+
+
 def EZLabel(text=""):
     return Label(FONT, text=text, color=theme[2], x=1)
 
@@ -509,3 +524,4 @@ while True:
     if t - last_saved > 60:
         last_saved = t
         save()
+
