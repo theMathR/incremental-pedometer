@@ -52,24 +52,35 @@ ALL = [
     BasicSock,
 ] 
 
-TIERS = [
+SHOE_TIERS = [
     [ # Tier 1
     BasicShoe,
-    BasicSock,
     ],
     [ # Tier 2
     BasicShoe,
-    BasicSock,
     ],
     [ # Tier 3
     BasicShoe,
-    BasicSock,
     ],
     [ # Tier 4
     BasicShoe,
+    ],
+]
+
+SOCK_TIERS = [
+    [ # Tier 1
     BasicSock,
     ],
-] 
+    [ # Tier 2
+    BasicSock,
+    ],
+    [ # Tier 3
+    BasicSock,
+    ],
+    [ # Tier 4
+    BasicSock,
+    ],
+]
 
 with open('save.json','r') as save_file:
     
@@ -89,6 +100,9 @@ with open('save.json','r') as save_file:
 
     money = save['money']
     
+    sock_price = 500
+    shoe_price = 550
+    
     #money_step_upgrades = save['money_step_upgrades']
     
     #energy = save['energy']
@@ -106,8 +120,8 @@ with open('save.json','r') as save_file:
     notation = save['notation']
     
     # Shoes and socks owned
-    shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']] + [BasicShoe()]
-    socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']]
+    shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']] + [BasicShoe()] * 8
+    socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']] + [BasicSock()] * 8
     
     items_bought = save['items_bought']
     bears = save['bears']
@@ -265,34 +279,52 @@ def buy_foot():
     socks_equipped.append(len(socks)-1)
     return True
 
-def buy_item():
-    global money, item_price, bears
-    if money < item_price: return False
-    money -= item_price
-    item_price *= 1.05
+def buy_shoe():
+    global money, shoe_price, bears
+    if money < shoe_price: return False
+    money -= shoe_price
+    shoe_price *= 1.05
     
     tier_rand = random.randint(1,16)
     if tier_rand <= 8:
-        tier = TIERS[0]
+        tier = SHOE_TIERS[0]
     elif tier_rand <= 12:
-        tier = TIERS[1]
+        tier = SHOE_TIERS[1]
     elif tier_rand <= 14:
-        tier = TIERS[2]
+        tier = SHOE_TIERS[2]
     elif tier_rand <= 15:
-        tier = TIERS[3]
+        tier = SHOE_TIERS[3]
     else:
         bears+=1
         return True
     
     item = random.choice(tier)()
-    item.durability = 5
-    if tier_rand==15:
-        item.durability = math.inf
-    if isinstance(item, Sock):
-        socks.append(item)
+    shoes.append(item)
+    return item
+
+def buy_sock():
+    global money, sock_price, bears
+    if money < sock_price: return False
+    money -= sock_price
+    sock_price *= 1.05
+    
+    tier_rand = random.randint(1,16)
+    if tier_rand <= 8:
+        tier = SOCK_TIERS[0]
+    elif tier_rand <= 12:
+        tier = SOCK_TIERS[1]
+    elif tier_rand <= 14:
+        tier = SOCK_TIERS[2]
+    elif tier_rand <= 15:
+        tier = SOCK_TIERS[3]
     else:
-        shoes.append(item)
-    return True
+        bears+=1
+        return True
+    
+    item = random.choice(tier)()
+    socks.append(item)
+    return item
+
 
 SOCK = 0
 SHOE = 1
@@ -305,20 +337,20 @@ def equip(sock_or_shoe, inv_index, foot_index):
         shoes_equipped[foot_index] = inv_index
     return True
 
-def remove_item(sock_or_shoe, inv_index):
-    if sock_or_shoe == SOCK:
-        if inv_index in socks_equipped: return False
-        socks.pop(inv_index)
-        for i,s in enumerate(socks_equipped):
-            if s > inv_index:
-                socks_equipped[i]-=1
-    else:
-        if inv_index in shoes_equipped: return False
-        shoes.pop(inv_index)
-        for i,s in enumerate(shoes_equipped):
-            if s > inv_index:
-                shoes_equipped[i]-=1
-    return True
+#def remove_item(sock_or_shoe, inv_index):
+#    if sock_or_shoe == SOCK:
+#        if inv_index in socks_equipped: return False
+#        socks.pop(inv_index)
+#        for i,s in enumerate(socks_equipped):
+#            if s > inv_index:
+#                socks_equipped[i]-=1
+#    else:
+#        if inv_index in shoes_equipped: return False
+#        shoes.pop(inv_index)
+#        for i,s in enumerate(shoes_equipped):
+#            if s > inv_index:
+#                shoes_equipped[i]-=1
+#    return True
 
 def change_notation():
     global notation

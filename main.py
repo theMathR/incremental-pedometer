@@ -195,15 +195,17 @@ def update_autobuyers_tab():
 
 item_select_info = None
 
-def begin_selection(sock_or_shoe, function=None):
+def begin_selection(sock_or_shoe, unequip=False):
     def wrapped():
         global item_select_info, tab_locked
-        if function is None and len(game.socks if sock_or_shoe == game.SOCK else game.shoes) == len(game.socks_equipped if sock_or_shoe == game.SOCK else game.shoes_equipped):
+        if not unequip and len(game.socks if sock_or_shoe == game.SOCK else game.shoes) == len(game.socks_equipped if sock_or_shoe == game.SOCK else game.shoes_equipped):
             tab.create_popup(f'You don\'t have any unequipped {"sock" if sock_or_shoe == game.SOCK else "shoe"}s!')
             return False
         tab_locked = True
         item_select_info = [sock_or_shoe]
-        if function: function()
+        if unequip:
+            item_select_info.append(index)
+            game.equip(item_select_info[0], None, index)
         return True
     return do_then_update(wrapped)
 
@@ -222,12 +224,6 @@ def list_items(function):
             continue
         tab.append_button(item.name, select_item(function(i)))
 
-def unequip(index):
-    def wrapped():
-        item_select_info.append(index)
-        game.equip(item_select_info[0], None, index)
-    return wrapped
-
 def equip(index):
     return lambda: game.equip(item_select_info[0], index, item_select_info[1])
 
@@ -237,9 +233,9 @@ def init_feet_tab():
         tab.append(EZLabel(f'You have {game.feet} feet.'))
         for i in range(game.feet):
             tab.append_button("Sock: " + (game.socks[game.socks_equipped[i]].name if isinstance(game.socks_equipped[i], int) else "Nothing"),
-                begin_selection(game.SOCK, unequip(i)), margin=5)
+                begin_selection(game.SOCK, True), margin=5)
             tab.append_button("Shoe: " + (game.shoes[game.shoes_equipped[i]].name if isinstance(game.shoes_equipped[i], int) else "Nothing"),
-                begin_selection(game.SHOE, unequip(i)))
+                begin_selection(game.SHOE, True))
         if game.feet < 9: tab.append_button(f'New foot for {f2str(game.foot_price)}$', do_then_update(check_money(game.buy_foot)), margin=5)
     else:
         tab.append(EZLabel(f'Select a {"sock" if item_select_info[0] == game.SOCK else "shoe"} to equip:'))
@@ -251,24 +247,25 @@ def update_feet_tab():
 
 @tab_init('Inventory')
 def init_inventory_tab():
-    if item_select_info is None:
-        tab.append(EZLabel('Click on an item to see \nits description'))
-        tab.append(EZLabel(f'Shoes: ({len(game.shoes)}/10)'), margin = 5)
-        for shoe in game.shoes:
-            tab.append_button(shoe.name, lambda: (tab.create_popup(shoe.name + ':\n' + shoe.description)))
-        tab.append_button('Remove shoe', begin_selection(game.SHOE))
-        
-        
-        tab.append(EZLabel(f'Socks: ({len(game.socks)}/10)'), margin = 5)
-        for sock in game.socks:
-            tab.append_button(sock.name, lambda: (tab.create_popup(sock.name + ':\n' + sock.description)))
-        tab.append_button('Remove shoe', begin_selection(game.SOCK))
-    else:
-        tab.append(EZLabel(f'Select a {"sock" if item_select_info[0] == game.SOCK else "shoe"} to remove:'))
-        list_items(remove_item)
+    tab.append_button(f"Buy shoe for {game.shoe_price}$", do_then_update(check_money(game.buy_shoe)))
+    tab.append_button(f"Buy sock for {game.sock_price}$", do_then_update(check_money(game.buy_sock)))
+    
+    tab.append_button(f"List shoes", lambda: None, margin=5)
+    tab.append_button(f"List socks", lambda: None)
+    return
+    # TODO
+    tab.append(EZLabel('Click on an item to see \nits description'), margin=5)
+    tab.append(EZLabel(f'Shoes: ({len(game.shoes)}/10)'), margin = 5)
+    for shoe in game.shoes:
+        tab.append_button(shoe.name, lambda: (tab.create_popup(shoe.name + ':\n' + shoe.description)))
+    tab.append_button('Remove shoe', begin_selection(game.SHOE))
+    
+    
+    tab.append(EZLabel(f'Socks: ({len(game.socks)}/10)'), margin = 5)
+    for sock in game.socks:
+        tab.append_button(sock.name, lambda: (tab.create_popup(sock.name + ':\n' + sock.description)))
+    tab.append_button('Remove shoe', begin_selection(game.SOCK))
 
-def remove_item(index):
-    return lambda: game.remove_item(item_select_info[0], index)
 
 @tab_update
 def update_inventory_tab():
@@ -491,7 +488,7 @@ while True:
         if accelerometer.acceleration[0] > 2 and step_done == True:
             step_done = False
             game.step()
-            update_screen()
+            if display: update_screen()
         if accelerometer.acceleration[0] < -2:
             step_done = True
     # Checking buttons
