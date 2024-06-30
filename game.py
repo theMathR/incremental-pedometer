@@ -29,7 +29,7 @@ class BasicShoe(Shoe):
     def name(self): return f"Basic shoe LV{self.level}"
     
     @property
-    def description(self): return Concatenate("Multiplies money/step by {:.3f}".format(math.log(self.level,100)+1))
+    def description(self): return "Multiplies money/step by {:.3f}".format(math.log(self.level,100)+1)
     
     def apply_effect(self, multiplier=1):
         pass
@@ -106,7 +106,7 @@ with open('save.json','r') as save_file:
     notation = save['notation']
     
     # Shoes and socks owned
-    shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']]
+    shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']] + [BasicShoe()]
     socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']]
     
     items_bought = save['items_bought']
@@ -303,6 +303,21 @@ def equip(sock_or_shoe, inv_index, foot_index):
     else:
         if inv_index in shoes_equipped: return False
         shoes_equipped[foot_index] = inv_index
+    return True
+
+def remove_item(sock_or_shoe, inv_index):
+    if sock_or_shoe == SOCK:
+        if inv_index in socks_equipped: return False
+        socks.pop(inv_index)
+        for i,s in enumerate(socks_equipped):
+            if s > inv_index:
+                socks_equipped[i]-=1
+    else:
+        if inv_index in shoes_equipped: return False
+        shoes.pop(inv_index)
+        for i,s in enumerate(shoes_equipped):
+            if s > inv_index:
+                shoes_equipped[i]-=1
     return True
 
 def change_notation():
