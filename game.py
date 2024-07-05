@@ -120,8 +120,8 @@ with open('save.json','r') as save_file:
     notation = save['notation']
     
     # Shoes and socks owned
-    shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']] + [BasicShoe()] * 8
-    socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']] + [BasicSock()] * 8
+    shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']] + [BasicShoe(i) for i in range(98)]
+    socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']] + [BasicSock(i) for i in range(98)]
     
     items_bought = save['items_bought']
     bears = save['bears']

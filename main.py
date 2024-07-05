@@ -193,83 +193,90 @@ def init_autobuyers_tab():
 def update_autobuyers_tab():
     pass
 
-item_select_info = None
+foot_selected = None
 
-def begin_selection(sock_or_shoe, unequip=False):
+def begin_equip(sock_or_shoe, foot_index):
     def wrapped():
-        global item_select_info, tab_locked
-        if not unequip and len(game.socks if sock_or_shoe == game.SOCK else game.shoes) == len(game.socks_equipped if sock_or_shoe == game.SOCK else game.shoes_equipped):
-            tab.create_popup(f'You don\'t have any unequipped {"sock" if sock_or_shoe == game.SOCK else "shoe"}s!')
-            return False
-        tab_locked = True
-        item_select_info = [sock_or_shoe]
-        if unequip:
-            item_select_info.append(index)
-            game.equip(item_select_info[0], None, index)
-        return True
-    return do_then_update(wrapped)
-
-def select_item(function):
-    def wrapped():
-        global item_select_info, tab_locked
-        function()
-        tab_locked = False
-        item_select_info = None
-        return True
-    return do_then_update(wrapped)
-
-def list_items(function):
-    for i, item in enumerate(game.socks if item_select_info[0] == game.SOCK else game.shoes):
-        if i in (game.socks_equipped if item_select_info[0] == game.SOCK else game.shoes_equipped):
-            continue
-        tab.append_button(item.name, select_item(function(i)))
+        global foot_selected
+        foot_selected = foot_index
+        begin_list(sock_or_shoe)
+    return wrapped
 
 def equip(index):
-    return lambda: game.equip(item_select_info[0], index, item_select_info[1])
+    # TODO: not equip already equipped shoe
+    def wrapped():
+        print(game.equip(inventory_info[0], index, foot_selected))
+        exit_list()
+    return wrapped
 
 @tab_init('Feet')
 def init_feet_tab():
-    if item_select_info is None:
+    if not inventory_info:
         tab.append(EZLabel(f'You have {game.feet} feet.'))
         for i in range(game.feet):
             tab.append_button("Sock: " + (game.socks[game.socks_equipped[i]].name if isinstance(game.socks_equipped[i], int) else "Nothing"),
-                begin_selection(game.SOCK, True), margin=5)
+                begin_equip(game.SOCK, i), margin=5)
             tab.append_button("Shoe: " + (game.shoes[game.shoes_equipped[i]].name if isinstance(game.shoes_equipped[i], int) else "Nothing"),
-                begin_selection(game.SHOE, True))
+                begin_equip(game.SHOE, i))
         if game.feet < 9: tab.append_button(f'New foot for {f2str(game.foot_price)}$', do_then_update(check_money(game.buy_foot)), margin=5)
     else:
-        tab.append(EZLabel(f'Select a {"sock" if item_select_info[0] == game.SOCK else "shoe"} to equip:'))
-        list_items(equip)
+        tab.append(EZLabel(f'Select a {"sock" if inventory_info[0] == game.SOCK else "shoe"} to equip:'))
+        display_list(equip)
 
 @tab_update
 def update_feet_tab():
-    pass # TODO: Change equipped feet
+    update_list()
+
+inventory_info = None
 
 @tab_init('Inventory')
 def init_inventory_tab():
-    tab.append_button(f"Buy shoe for {game.shoe_price}$", do_then_update(check_money(game.buy_shoe)))
-    tab.append_button(f"Buy sock for {game.sock_price}$", do_then_update(check_money(game.buy_sock)))
-    
-    tab.append_button(f"List shoes", lambda: None, margin=5)
-    tab.append_button(f"List socks", lambda: None)
-    return
-    # TODO
-    tab.append(EZLabel('Click on an item to see \nits description'), margin=5)
-    tab.append(EZLabel(f'Shoes: ({len(game.shoes)}/10)'), margin = 5)
-    for shoe in game.shoes:
-        tab.append_button(shoe.name, lambda: (tab.create_popup(shoe.name + ':\n' + shoe.description)))
-    tab.append_button('Remove shoe', begin_selection(game.SHOE))
-    
-    
-    tab.append(EZLabel(f'Socks: ({len(game.socks)}/10)'), margin = 5)
-    for sock in game.socks:
-        tab.append_button(sock.name, lambda: (tab.create_popup(sock.name + ':\n' + sock.description)))
-    tab.append_button('Remove shoe', begin_selection(game.SOCK))
+    if not inventory_info:
+        tab.append_button(f"Buy shoe for {game.shoe_price}$", do_then_update(check_money(game.buy_shoe)))
+        tab.append_button(f"Buy sock for {game.sock_price}$", do_then_update(check_money(game.buy_sock)))
+        
+        tab.append_button(f"See shoe list", lambda: begin_list(game.SHOE), margin=5)
+        tab.append_button(f"See sock list", lambda: begin_list(game.SOCK))
+    else:
+        tab.append(EZLabel('Click on an item to see \nits description'))
+        display_list(lambda i: lambda: tab.create_popup((game.shoes if inventory_info[0]==game.SHOE else game.socks)[i].name + ':\n' + (game.shoes if inventory_info[0]==game.SHOE else game.socks)[i].description))
 
+def begin_list(sock_or_shoe):
+    global tab_locked, inventory_info
+    tab_locked = True
+    inventory_info = [sock_or_shoe, 0]
+    do_then_update(lambda: True)()
+
+def display_list(function):
+    tab.append(EZLabel(f'Page {1+inventory_info[1]}/{len(game.shoes if inventory_info[0]==game.SHOE else game.socks)//6+1}|Press B to exit'))
+    for i, item in enumerate((game.shoes if inventory_info[0]==game.SHOE else game.socks)[inventory_info[1]*6:inventory_info[1]*6+6]):
+        tab.append_button(item.name, function(i+inventory_info[1]*6))
+
+def update_list():
+    global tab_locked, inventory_info
+    tab_locked = bool(inventory_info) or tab_locked
+    if inventory_info and not tab.popup_open:
+        if buttons[LEFT]:
+            inventory_info[1] -= 1
+        if buttons[RIGHT]:
+            inventory_info[1] += 1
+        if buttons[LEFT] or buttons[RIGHT]:
+            inventory_info[1] %= len(game.shoes if inventory_info[0]==game.SHOE else game.socks)//6+1
+            tab.button_index = 0
+            do_then_update(lambda: True)()
+        elif buttons[B]:
+            exit_list()
+
+def exit_list():
+    global tab_locked, inventory_info
+    inventory_info = None
+    tab_locked = False
+    tab.button_index = 0
+    do_then_update(lambda: True)()
 
 @tab_update
 def update_inventory_tab():
-    pass
+    update_list()
 
 @tab_init('Training')
 def init_training_tab():
@@ -345,8 +352,8 @@ def change_theme():
 
 def do_then_update(func):
     def wrapped():
-        global tab
-        buttons[A] = False
+        global tab, buttons
+        buttons = [False]*6
         i = tab.button_index
         if not func(): return
         tab_container.pop()
