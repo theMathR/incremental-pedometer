@@ -99,6 +99,8 @@ with open('save.json','r') as save_file:
     total_steps = save['total_steps']
 
     money = save['money']
+
+    name = save['name']
     
     sock_price = 500
     shoe_price = 550
@@ -391,6 +393,7 @@ def save():
         'bears': bears,
         'items_bought': items_bought,
         'theme': theme_index,
+        'name': name
     }
     with open('save.json', 'w') as save_file:
         json.dump(save, save_file)

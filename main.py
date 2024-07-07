@@ -4,7 +4,10 @@ import board
 import storage
 import displayio
 import adafruit_st7735r
+import socketpool
+import wifi
 import terminalio
+from ipaddress import ip_address
 from themes import themes, theme_names
 from busio import I2C, SPI
 from fourwire import FourWire
@@ -107,7 +110,7 @@ class Tab(displayio.Group):
         global tab_locked
         text = add_newlines(text)
         self.popup_open = True
-        tab_locked = True
+        tab_locked = True  
         popup = displayio.Group()
         popup.x=12
         popup.y=11
@@ -277,6 +280,33 @@ def exit_list():
 @tab_update
 def update_inventory_tab():
     update_list()
+
+trade_info = [0]
+
+@tab_init('Trade')
+def init_trade_tab():
+    tab.append(EZLabel('Item you want to trade:'))
+    tab.append_button('None', lambda: 0)
+    tab.append_button('Host', host_trade, margin=5)
+    tab.append_button('Connect', connect_trade, margin=5)
+
+def host_trade():
+    for i in range(4): tab.pop()
+    wifi.radio.start_ap("INCPOD_"+game.name, password="HACKCLUB")
+    wifi.radio.set_ipv4_address_ap(ip_address('72.65.67.75'), ip_address(0), ip_address(0))
+    while not len(wifi.radio.stations_ap):
+        pass
+    tab.append(EZLabel('connected'))
+
+def connect_trade():
+    for i in range(4): tab.pop()
+    wifi.radio.connect("INCPOD_HHHHH", password="HACKCLUB")
+    tab.append(EZLabel('Connected!'))
+
+@tab_update
+def update_trade_tab():
+    pass
+
 
 @tab_init('Training')
 def init_training_tab():
