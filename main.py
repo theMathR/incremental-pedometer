@@ -476,8 +476,8 @@ def save():
 
 # Accelerometer part
 
-accelerometer = ADXL345(I2C(scl=board.GP17, sda=board.GP16))
-accelerometer.enable_motion_detection(threshold=10) # TODO: Set threshold
+#accelerometer = ADXL345(I2C(scl=board.GP17, sda=board.GP16))
+#accelerometer.enable_motion_detection(threshold=10) # TODO: Set threshold
 step_done = False
 
 # Buttons now !
@@ -495,7 +495,7 @@ buttons_input = [
 ]
 
 UP = 2
-DOWN = 3
+DOWN = 3    
 LEFT = 1
 RIGHT = 0
 A = 4
@@ -521,13 +521,13 @@ enable_screen()
 
 while True:
     # Check accelerometer
-    if accelerometer.events['motion']:
-        if accelerometer.acceleration[0] > 2 and step_done == True:
-            step_done = False
-            game.step()
-            if display: update_screen()
-        if accelerometer.acceleration[0] < -2:
-            step_done = True
+    #if accelerometer.events['motion']:
+    #    if accelerometer.acceleration[0] > 2 and step_done == True:
+    #        step_done = False
+    #        game.step()
+    #        if display: update_screen()
+    #    if accelerometer.acceleration[0] < -2:
+    #        step_done = True
     # Checking buttons
     bval = [not b.value for b in buttons_input]
     buttons = [v and not d for v,d in zip(bval, buttons_done)]
