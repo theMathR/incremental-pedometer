@@ -130,6 +130,13 @@ class Tab(displayio.Group):
         tab_container.pop()
         tab_container.pop()
 
+    def pop(self):
+        if isinstance(self[-1], Button):
+            self.buttons.pop()
+            self.button_functions.pop()
+            self.button_index = min(self.button_index, len(self.buttons)-1)
+        super().pop()
+
 tab_init_functions = []
 tab_names = []
 def tab_init(name):
@@ -245,7 +252,8 @@ def init_inventory_tab():
         display_list(lambda i: lambda: tab.create_popup((game.shoes if inventory_info[0]==game.SHOE else game.socks)[i].name + ':\n' + (game.shoes if inventory_info[0]==game.SHOE else game.socks)[i].description))
 
 def begin_list(sock_or_shoe):
-    global tab_locked, inventory_info
+    global tab_locked, inventory_info, refresh_c
+    refresh_c = False
     tab_locked = True
     inventory_info = [sock_or_shoe, 0]
     do_then_update(lambda: True)()
@@ -281,32 +289,186 @@ def exit_list():
 def update_inventory_tab():
     update_list()
 
-trade_info = [0]
+trade_info = None
 
 @tab_init('Trade')
 def init_trade_tab():
-    tab.append(EZLabel('Item you want to trade:'))
-    tab.append_button('None', lambda: 0)
-    tab.append_button('Host', host_trade, margin=5)
-    tab.append_button('Connect', connect_trade, margin=5)
+    if not inventory_info:
+        tab.append(EZLabel('Trade items through\nWiFi to level them up!'))
+        tab.append(EZLabel('Item you want to trade:'),margin=5)
+        tab.append_button('None' if not trade_info else (game.shoes if trade_info[0]==game.SHOE else game.socks)[trade_info[1]].name, select_sock_or_shoe)
+        tab.append_button('Host', host_trade, margin=5)
+        tab.append_button('Connect', connect_trade)
+    else:
+        display_list(select_trade)
 
+def select_trade(i):
+    def wrapped():
+        global trade_info
+        trade_info = [inventory_info[0],i]
+        exit_list()
+    return wrapped
+
+def select_sock_or_shoe():
+    global tab_locked, refresh_c
+    tab_locked = True
+    refresh_c = True
+    for i in range(5): tab.pop()
+    tab.append_button('Choose a shoe', lambda: begin_list(game.SHOE))
+    tab.append_button('Choose a sock', lambda: begin_list(game.SOCK))
+    tab.append_button('Close', exit)
+    tab.button_index = 0
+    while tab_locked and refresh_c:
+        update_buttons()
+        update_screen()
+    
 def host_trade():
-    for i in range(4): tab.pop()
+    global s, tab_locked, buttons, trade_info
+    if not trade_info:
+        tab.create_popup('No item to trade selected!')
+        return
+    tab_locked = True
+    buttons = [False]*6
+    for i in range(5): tab.pop()
+    label = EZLabel('Starting...')
+    tab.append(label)
+    display.refresh()
+    
     wifi.radio.start_ap("INCPOD_"+game.name, password="HACKCLUB")
-    wifi.radio.set_ipv4_address_ap(ip_address('72.65.67.75'), ip_address(0), ip_address(0))
+    wifi.radio.set_ipv4_address_ap(ipv4=ip_address('72.65.67.75'), gateway=ip_address(0), netmask=ip_address(0))
+    
+    s = socketpool.SocketPool(wifi.radio).socket()
+    s.bind(('72.65.67.75',4130))
+    s.listen(1)
+    
+    label.text = "Name: "+game.name+"\nWaiting for connection..."
+    tab.append_button('Close', do_then_update(exit_host))
+    tab.button_index = 0
+    display.refresh()
+    
     while not len(wifi.radio.stations_ap):
-        pass
-    tab.append(EZLabel('connected'))
+        update_buttons()
+        update_screen()
+        if not tab_locked:
+            return
+    
+    tab.pop()
+    label.text = "Connected! Trading..."
+    display.refresh()
+    
+    try:
+        cs, addr = s.accept()
+        
+        cs.send(game.item_to_bytes((game.shoes if trade_info[0]==game.SHOE else game.socks)[trade_info[1]]))
+        
+        buf = bytearray(17)
+        cs.recv_into(buf)
+        new_item = game.bytes_to_item(buf)
+        
+        cs.close()
+        
+        game.trade(trade_info[0], trade_info[1], new_item)
+        
+        trade_info = None
+        do_then_update(exit_host)()
+        tab.create_popup('You received a '+new_item.name+'!')
+    except Exception as e:
+        print(e)
+        do_then_update(exit_host)()
+        tab.create_popup('An error occured!')
+
+def exit_host():
+    global s, tab_locked
+    s.close()
+    s = None
+    tab_locked = False
+    wifi.radio.stop_ap()
+    return True
+
+def select_host(name):
+    def wrapped():
+        global host_name
+        host_name = name
+    return wrapped
+
+def refresh():
+    global refresh_c
+    refresh_c = True
+
+def exit():
+    global tab_locked
+    tab_locked = False
 
 def connect_trade():
-    for i in range(4): tab.pop()
-    wifi.radio.connect("INCPOD_HHHHH", password="HACKCLUB")
-    tab.append(EZLabel('Connected!'))
-
+    global s, tab_locked, refresh_c, host_name, trade_info
+    if not trade_info:
+        tab.create_popup('No item to trade selected!')
+        return
+    tab_locked = True
+    for i in range(5): tab.pop()
+    buttons = [False]*6
+    refresh_c = True
+    host_name = None
+    label = EZLabel('Select a host:')
+    tab.append(label)
+    
+    while not host_name:
+        if refresh_c:
+            refresh_c = False
+            for i in range(len(tab)-1): tab.pop()
+            
+            duplicates = []
+            for nw in wifi.radio.start_scanning_networks():
+                if nw.ssid.startswith('INCPOD_') and nw.ssid not in duplicates:
+                    tab.append_button(nw.ssid[7:], select_host(nw.ssid))
+                    duplicates.append(nw.ssid)
+                    
+            tab.append_button('Refresh', refresh, margin=5)
+            tab.append_button('Exit', exit)
+            tab.button_index = 0
+        update_buttons()
+        update_screen()
+        if not tab_locked:
+            return
+    print(host_name)
+    
+    for i in range(len(tab)-1): tab.pop()
+    label.text = "Connecting..."
+    display.refresh()
+    
+    try:
+        wifi.radio.connect(host_name, password="HACKCLUB")
+    
+        wifi.radio.set_ipv4_address(ipv4=ip_address('67.76.85.66'), gateway=ip_address(0), netmask=ip_address(0))
+        
+        s = socketpool.SocketPool(wifi.radio).socket()
+        s.connect(('72.65.67.75',4130))
+        
+        label.text = "Connected! Trading..."
+        display.refresh()
+        
+        buf = bytearray(17)
+        s.recv_into(buf)
+        new_item = game.bytes_to_item(buf)
+        
+        s.send(game.item_to_bytes((game.shoes if trade_info[0]==game.SHOE else game.socks)[trade_info[1]]))
+        
+        s.close()
+        
+        game.trade(trade_info[0], trade_info[1], new_item)
+        
+        tab_locked = False
+        trade_info = None
+        do_then_update(lambda: True)()
+        tab.create_popup('You received a '+new_item.name+'!')
+    except Exception as e:
+        print(e)
+        do_then_update(lambda: True)()
+        tab.create_popup('An error occured!')
+    
 @tab_update
 def update_trade_tab():
-    pass
-
+    update_list()
 
 @tab_init('Training')
 def init_training_tab():
@@ -315,7 +477,7 @@ def init_training_tab():
         return
     tab.append(EZLabel('In training mode\nenergy is way more\npunishing.\nGet as much money\nas possible to\nmake the energy limit higher!'))
     tab.append(EZLabel(f'Current max energy: {f2str(100+game.muscles)}%'))
-    tab.append_button('Enter training mode', do_then_update(game.toggle_training_mode))
+    tab.append_button('Enter training mode', do_then_update(game.toggle_training))
 
 @tab_update
 def update_training_tab():
@@ -356,6 +518,7 @@ def update_settings_tab():
 @tab_init('Secret')
 def init_secret_tab():
     tab.append(Label(FONT, text="This is MathR's secret tab,\n           enjoy.", color=theme[2], y=30, x=0))
+    return
     bitmap=displayio.OnDiskBitmap("/assets/secret_nubert.bmp")
     nubert=displayio.TileGrid(bitmap, pixel_shader=bitmap.pixel_shader)
     nubert.x = 69 # nice
@@ -476,8 +639,8 @@ def save():
 
 # Accelerometer part
 
-#accelerometer = ADXL345(I2C(scl=board.GP17, sda=board.GP16))
-#accelerometer.enable_motion_detection(threshold=10) # TODO: Set threshold
+accelerometer = ADXL345(I2C(scl=board.GP17, sda=board.GP16))
+accelerometer.enable_motion_detection(threshold=10)
 step_done = False
 
 # Buttons now !
@@ -518,20 +681,23 @@ enable_screen()
 
 # Main game loop
 
-
-while True:
-    # Check accelerometer
-    #if accelerometer.events['motion']:
-    #    if accelerometer.acceleration[0] > 2 and step_done == True:
-    #        step_done = False
-    #        game.step()
-    #        if display: update_screen()
-    #    if accelerometer.acceleration[0] < -2:
-    #        step_done = True
-    # Checking buttons
+def update_buttons():
+    global buttons, buttons_done
     bval = [not b.value for b in buttons_input]
     buttons = [v and not d for v,d in zip(bval, buttons_done)]
     buttons_done = bval[:] 
+
+while True:
+    # Check accelerometer
+    if accelerometer.events['motion']:
+        if accelerometer.acceleration[0] > 2 and step_done == True:
+            step_done = False
+            game.step()
+            if display: update_screen()
+        if accelerometer.acceleration[0] < -2:
+            step_done = True
+
+    update_buttons()
     if True in buttons:
         last_used = time.monotonic()
         if display == None:

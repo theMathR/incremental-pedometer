@@ -10,11 +10,9 @@ def gauss(mu=0,sigma=1):
         return mu + sigma*math.sqrt(-2*math.log(s)/s)
 
 class Item:
-    def __init__(self, level=1, data=0, durability=int(750000+1000*gauss(mu=0,sigma=15))):
+    def __init__(self, level=1, previous_owners=['00000','00000','00000']):
         self.level = level
-        self.data = data
-        self.durability = durability
-
+        self.previous_owners = previous_owners
 
 class Shoe(Item): pass
 class Sock(Item): pass
@@ -36,7 +34,6 @@ class BasicShoe(Shoe):
 
 class BasicSock(Sock):
     i=1
-    power=False
     @property
     def name(self): return f"Basic sock LV{self.level}"
     
@@ -84,7 +81,7 @@ SOCK_TIERS = [
 
 with open('save.json','r') as save_file:
     
-    muscles=money_upgrades=money_gained=nb_orpheus=training_mode=energy_orpheus=0.0
+    muscles=money_upgrades=money_gained=nb_orpheus=energy_orpheus=0.0
     money_upgrades_autobuyers=cereal_bar_autobuyers=apple_autobuyers=0.0
     money_upgrades_autobuyer_price,cereal_bar_autobuyer_price,apple_autobuyer_price=1000.0,1000.0,100000.0
     money_upgrades_autobuyers_on = True
@@ -92,6 +89,7 @@ with open('save.json','r') as save_file:
     sacrifice_price=123456789.0
     energy = energy_orpheus = 100.0
     training_mode_unlocked = False
+    training_mode = False
     
     save = json.load(save_file)
 
@@ -122,8 +120,8 @@ with open('save.json','r') as save_file:
     notation = save['notation']
     
     # Shoes and socks owned
-    shoes = [ALL[s['type']](s['level'], s['data']) for s in save['shoes']] + [BasicShoe(i) for i in range(98)]
-    socks = [ALL[s['type']](s['level'], s['data']) for s in save['socks']] + [BasicSock(i) for i in range(98)]
+    shoes = [ALL[s['type']](s['level'], s['previous_owners']) for s in save['shoes']]
+    socks = [ALL[s['type']](s['level'], s['previous_owners']) for s in save['socks']]
     
     items_bought = save['items_bought']
     bears = save['bears']
@@ -153,10 +151,6 @@ def step():
     if money_upgrades_autobuyers_on: buy_money_upgrade(n=money_upgrades_autobuyers)
     buy_cereal_bar(n=min(cereal_bar_autobuyers, int(100+muscles - energy)/(10 if training_mode else 20)))
     buy_apple(n=min(apple_autobuyers, (100-energy_orpheus)*nb_orpheus/20))
-    
-    # Update item durability
-    update_durability(shoes,shoes_equipped)
-    update_durability(socks,socks_equipped)
 
 def unlock_training_mode():
     global money, training_mode_unlocked
@@ -164,21 +158,7 @@ def unlock_training_mode():
     money -= 5000
     training_mode_unlocked = True
     return True
-
-def update_durability(inventory, equipped):
-    to_remove=[]
-    for i,s in enumerate(equipped):
-        inventory[s].durability-=1
-        if inventory[s].durability == 0:
-            to_remove.append(s)
-    for r in to_remove:
-        inventory.pop(r)
-        for i,s in enumerate(equipped):
-            if r == s:
-                equipped[i]=None
-            if s > r:
-                equipped[i]-=1
-
+    
 def buy_money_upgrade(n=1):
     global money, money_upgrades, money_upgrades_price
     money_upgrades_price = 100+money_upgrades*150
@@ -256,10 +236,11 @@ def sacrifice():
     return True
 
 def money_to_muscles():
-    return int(math.log10(money))
+    return int(math.log(money+1, 10))
 
 def toggle_training():
     global training_mode, money, money_saved, muscles
+    print('h')
     if not training_mode:
         money_saved = money
         money = 0
@@ -366,6 +347,31 @@ def reset_steps():
     global steps
     steps = 0
 
+def trade(sock_or_shoe, index, new_item):
+    (shoes if sock_or_shoe==game.SHOE else socks)[index] = new_item
+    if not game.name in new_item.previous_owners:
+        new_item.previous_owners.pop(0)
+        new_item.level += 1
+    else:
+        new_item.previous_owners.remove(game.name)
+    new_item.previous_owners.append(game.name)
+
+def item_to_bytes(item):
+    l = [item.i, item.level]
+    for o in item.previous_owners:
+        l += list(map(ord, o))
+    return bytearray(l)
+
+def bytes_to_item(bytes):
+    item = ALL[int(bytes[0])]()
+    item.level = int(bytes[1])
+    item.previous_owners = [
+        ''.join(map(chr,bytes[2:7])),
+        ''.join(map(chr,bytes[7:12])),
+        ''.join(map(chr,bytes[12:17])),
+    ]
+    return item
+
 def save():
     save = {
         'steps': steps,
@@ -380,14 +386,14 @@ def save():
             {
                 'type': s.i,
                 'level': s.level,
-                'data': s.data,
+                'prevous_owners': s.prevous_owners,
             }
         for s in shoes],
         'socks': [
             {
                 'type': s.i,
                 'level': s.level,
-                'data': s.data,
+                'prevous_owners': s.prevous_owners,
             }
         for s in socks],
         'bears': bears,

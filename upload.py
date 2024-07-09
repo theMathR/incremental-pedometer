@@ -29,14 +29,14 @@ while True:
         console.print("[bold green]Device found ![/bold green]")
         console.print()
         f = open("upload_settings.txt","r")
-        if f.read() != port:
+        if False:# f.read() != port:
             doSaving = Confirm.ask("Do you want to save this device ? (The next time you'll just have to hit enter)")
         f.close()
         if doSaving:
             f = open("upload_settings.txt","w")
             f.write(port)
             f.close()
-        files = ["main.py","save.json","default_save.json","game.py","online.py","boot.py","lib","assets","themes.py"]
+        files = ["main.py","save.json","default_save.json","game.py","lib","themes.py"]
         with console.status("[bold green] Moving files ...") as status:
             while files:
                 file = files.pop(0)
