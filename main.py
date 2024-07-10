@@ -7,13 +7,15 @@ import adafruit_st7735r
 import socketpool
 import wifi
 import terminalio
+from gc import collect, mem_alloc
+from math import floor
 from ipaddress import ip_address
 from themes import themes, theme_names
 from busio import I2C, SPI
 from fourwire import FourWire
 from digitalio import DigitalInOut, Pull
 from adafruit_adxl34x import ADXL345
-from adafruit_display_shapes.rect import Rect
+from vectorio import Rectangle
 from adafruit_display_text.label import Label
 from adafruit_display_text import LabelBase
 from adafruit_display_shapes.roundrect import RoundRect
@@ -120,7 +122,9 @@ class Tab(displayio.Group):
             selected_label=theme[1], selected_fill=theme[3], selected_outline=theme[2])
         button.selected = True
         popup.append(button)
-        tab_container.append(Rect(12, 11, 135, 86, fill=theme[0], outline=theme[2], stroke=2))
+        tab_container.append(Rectangle(pixel_shader=theme, width=139, height=90, x=10, y=9, color_index=2))
+        tab_container.append(Rectangle(pixel_shader=theme, width=135, height=86, x=12, y=11, color_index=0))
+        #tab_container.append(Rect(12, 11, 135, 86, fill=theme[0], outline=theme[2], stroke=2))
         tab_container.append(popup)
     
     def close_popup(self):
@@ -129,6 +133,8 @@ class Tab(displayio.Group):
         tab_locked = False
         tab_container.pop()
         tab_container.pop()
+        tab_container.pop()
+        collect()
 
     def pop(self):
         if isinstance(self[-1], Button):
@@ -136,6 +142,7 @@ class Tab(displayio.Group):
             self.button_functions.pop()
             self.button_index = min(self.button_index, len(self.buttons)-1)
         super().pop()
+        collect()
 
 tab_init_functions = []
 tab_names = []
@@ -173,8 +180,8 @@ def update_steps_tab():
 def init_money_tab():
     tab.append(EZLabel(f"You gain {f2str(game.money_gained)} $/step"))
     
-    tab.append(EZLabel(f'You have {f2str(game.money_upgrades)}\n money upgrades'), margin=5)
-    tab.append_button(f'Buy one for {f2str(game.money_upgrade_price)}$', do_then_update(check_money(game.buy_money_upgrade)))
+    tab.append(EZLabel(f'You have {f2str(game.money_upgrades)}\nmoney upgrades'), margin=5)
+    tab.append_button(f'Buy one for {f2str(100+game.money_upgrades*150-game.effects[9]+1)}$', do_then_update(check_money(game.buy_money_upgrade)))
     
     tab.append(EZLabel(f"Your energy is at {f2str(game.energy)}%"), margin=5)
     tab.append(EZLabel(f"You lose energy every step\nand it reduces your money gain"))
@@ -183,7 +190,7 @@ def init_money_tab():
 @tab_update
 def update_money_tab():
     tab[0].text = f"You gain {f2str(game.money_gained)} $/step"
-    tab[1].text = f'You have {f2str(game.money_upgrades)}\n money upgrades'
+    tab[1].text = f'You have {f2str(game.money_upgrades)}\nmoney upgrades'
     tab[3].text = f"Your energy is at {f2str(game.energy)}%"
 
 @tab_init('Autobuyers')
@@ -256,10 +263,13 @@ def init_inventory_tab():
 def buy_item_popup(function):
     def wrapped():
         r = function()
+        if not r: return False
         if isinstance(r, bool):
             tab.create_popup('You encountered a bear!')
         else:
             tab.create_popup('You bought a '+r.name+'!')
+        return True
+    return wrapped
 
 def begin_list(sock_or_shoe):
     global tab_locked, inventory_info, refresh_c
@@ -269,7 +279,7 @@ def begin_list(sock_or_shoe):
     do_then_update(lambda: True)()
 
 def display_list(function):
-    tab.append(EZLabel(f'Page {1+inventory_info[1]}/{len(game.shoes if inventory_info[0]==game.SHOE else game.socks)//6+1}|Press B to exit'))
+    tab.append(EZLabel(f'Page {1+inventory_info[1]}/{floor(len(game.shoes if inventory_info[0]==game.SHOE else game.socks)/6)+1}|Press B to exit'))
     for i, item in enumerate((game.shoes if inventory_info[0]==game.SHOE else game.socks)[inventory_info[1]*6:inventory_info[1]*6+6]):
         tab.append_button(item.name, function(i+inventory_info[1]*6))
 
@@ -282,7 +292,7 @@ def update_list():
         if buttons[RIGHT]:
             inventory_info[1] += 1
         if buttons[LEFT] or buttons[RIGHT]:
-            inventory_info[1] %= len(game.shoes if inventory_info[0]==game.SHOE else game.socks)//6+1
+            inventory_info[1] %= floor(len(game.shoes if inventory_info[0]==game.SHOE else game.socks)/6)+1
             tab.button_index = 0
             do_then_update(lambda: True)()
         elif buttons[B]:
@@ -408,6 +418,7 @@ def refresh():
 def exit():
     global tab_locked
     tab_locked = False
+    do_then_update(lambda: True)()
 
 def connect_trade():
     global s, tab_locked, refresh_c, host_name, trade_info
@@ -492,11 +503,12 @@ def init_training_tab():
 @tab_update
 def update_training_tab():
     if game.training_mode:
-        tab[2].label = f"Stop for +{f2str(game.money_to_muscles()-game.muscles)}%"
+        x = game.money_to_muscles()-game.muscles
+        tab[2].label = f"Stop for +{f2str(x)}%" if x>0 else "Stop for +0%"
 
 @tab_init('Orpheus')
 def init_orpheus_tab():
-    if not game.nb_orpheus: tab.append(EZLabel('Sacrificing will reset\nyour entire progression\nexcept your items.\nIn exchange you summon\nOrpheus who will boost\nyour production!'))
+    if not game.nb_orpheus: tab.append(EZLabel('Sacrificing will reset\nyour entire progression\nexcept your items\nand autobuyers.\nIn exchange you summon\nOrpheus who will boost\nyour production!'))
     tab.append_button(f'Sacrifice for {f2str(game.sacrifice_price)}$', do_then_update(check_money(game.sacrifice)))
     
     if not game.nb_orpheus: return
@@ -549,6 +561,7 @@ def update_screen():
     tab_update_functions[tab_index]()
     money_label.text = game.float_to_str(game.money)+"$"
     display.refresh()
+    collect()
 
 def change_theme():
     game.change_theme(len(themes))
@@ -563,6 +576,7 @@ def do_then_update(func):
         r = func()
         if not r: return False
         tab_container.pop()
+        collect()
         tab = Tab()
         tab_container.append(tab)
         tab_init_functions[tab_index]()
@@ -585,14 +599,14 @@ def configure_groups():
     
     display.root_group = displayio.Group()
     
-    display.root_group.append(Rect(0, 20, 160, 108, fill=theme[0]))
+    display.root_group.append(Rectangle(pixel_shader=theme, width=160, height=108, x=0, y=20, color_index=0))
 
     tab_container = displayio.Group(y=25)
     display.root_group.append(tab_container)
     
-    display.root_group.append(Rect(0, 0, 160, 20, fill=theme[1]))
-    display.root_group.append(Rect(0, 20, 160, 2, fill=theme[2]))
-    display.root_group.append(Rect(80, 0, 2, 20, fill=theme[2]))    
+    display.root_group.append(Rectangle(pixel_shader=theme, width=160, height=20, x=0, y=0, color_index=1))
+    display.root_group.append(Rectangle(pixel_shader=theme, width=160, height=2, x=0, y=20, color_index=2))
+    display.root_group.append(Rectangle(pixel_shader=theme, width=2, height=20, x=80, y=0, color_index=2))    
 
     tab_name = Label(FONT,text=tab_names[tab_index], max_characters=29, color=theme[2])
     money_label = Label(FONT,text=game.float_to_str(game.money), max_characters=29, color=theme[2])
@@ -642,6 +656,7 @@ def disable_screen():
     displayio.release_displays()
     display_bus.deinit()
     display = None
+    collect()
 
 def save():
     try:
@@ -713,6 +728,7 @@ while True:
 
     update_buttons()
     if True in buttons:
+        print(mem_alloc())
         last_used = time.monotonic()
         if display == None:
             buttons = [False]*6

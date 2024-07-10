@@ -66,6 +66,19 @@ class FoodShoe(Shoe):
         effects[3] += min(20,self.level)*10*math.sqrt(self.multiplier)
         effects[3] = min(effects[3],400)
 
+
+class UpgradeShoe(Shoe):
+    i=13
+    @property
+    def name(self): return f"Upgrade shoe LV{self.level}"
+    
+    @property
+    def description(self): return "Makes money upgrade prices lower by -{:.0f}".format(min(20,self.level)*10)
+    
+    def apply_effect(self, multiplier=1):
+        effects[9] += min(20,self.level)*10*math.sqrt(self.multiplier)
+        effects[9] = min(effects[3],400)
+
 class MoneyShoe(Shoe):
     i=7
     @property
@@ -119,7 +132,7 @@ class DoubleShoe(Shoe):
     def name(self): return f"Double shoe LV{self.level}"
     
     @property
-    def description(self): return "A very powerful shoe which makes a step give money twice once level 5 is reached"
+    def description(self): return "Makes a step give money twice once level 5 is reached"
     
     def apply_effect(self, multiplier=1):
         effects[6] = 0 if self.level >= 5 else 1
@@ -186,9 +199,10 @@ ALL = [
     PowerShoe,
     DoubleShoe,
     GoldenSock,
+    UpgradeShoe,
 ]
 
-effects = [1]*9
+effects = [1]*10
 
 with open('save.json','r') as save_file:
     
@@ -196,7 +210,6 @@ with open('save.json','r') as save_file:
     money_upgrades_autobuyers=cereal_bar_autobuyers=apple_autobuyers=0.0
     money_upgrades_autobuyer_price,cereal_bar_autobuyer_price,apple_autobuyer_price=1000.0,1000.0,100000.0
     money_upgrades_autobuyers_on = True
-    money_upgrade_price = 100.0
     sacrifice_price=123456789.0
     energy = energy_orpheus = 100.0
     training_mode_unlocked = False
@@ -285,13 +298,13 @@ def unlock_training_mode():
     return True
     
 def buy_money_upgrade(n=1):
-    global money, money_upgrades, money_upgrades_price
-    money_upgrades_price = 100+money_upgrades*150
+    global money, money_upgrades
+    money_upgrades_price = 100+money_upgrades*150-effects[9]+1
     for i in range(n):
         if money<money_upgrades_price: return False
         money -= money_upgrades_price
         money_upgrades += 1
-        money_upgrades_price = 100+money_upgrades*150
+        money_upgrades_price = 100+money_upgrades*150-effects[9]+1
     return True
         
 
@@ -370,9 +383,11 @@ def toggle_training():
         money = 0
         training_mode = True
     else:
+        x = money_to_muscles()
+        if muscles < x: muscles = x
         money = money_saved
-        muscles = money_to_muscles()
         training_mode = False
+    return True
 
 def buy_foot():
     global money, foot_price, feet
