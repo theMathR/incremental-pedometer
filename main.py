@@ -1,12 +1,11 @@
 import game
 import time
 import board
-import storage
 import displayio
 import adafruit_st7735r
 import socketpool
 import wifi
-import terminalio
+from terminalio import FONT
 from gc import collect, mem_alloc
 from math import floor
 from ipaddress import ip_address
@@ -46,7 +45,6 @@ def EZLabel(text=""):
 # Importants var
 TAB_COUNT = -1
 
-FONT = terminalio.FONT
 FONT_SIZE = FONT.get_bounding_box()[1]
 
 # Tabs
@@ -222,7 +220,7 @@ def begin_equip(sock_or_shoe, foot_index):
 def equip(index):
     # TODO: not equip already equipped shoe
     def wrapped():
-        print(game.equip(inventory_info[0], index, foot_selected))
+        game.equip(inventory_info[0], index, foot_selected)
         exit_list()
     return wrapped
 
@@ -451,7 +449,6 @@ def connect_trade():
         update_screen()
         if not tab_locked:
             return
-    print(host_name)
     
     for i in range(len(tab)-1): tab.pop()
     label.text = "Connecting..."
@@ -533,9 +530,30 @@ def init_settings_tab():
     tab.append_button('Change theme', change_theme)
     tab.append(EZLabel(), margin=5)
     tab.append_button('Change notation', game.change_notation)
+    tab.append_button('Reset save', reset_save_ask, margin=5)
+
+def reset_save_ask():
+    global tab_locked
+    tab_locked = True
+    for i in range(5): tab.pop()
+    tab.append(EZLabel('Are you sure?'))
+    tab.append_button('No', exit)
+    tab.append_button('Yes', reset_save)
+    tab.button_index = 0
+    while tab_locked:
+        update_buttons()
+        update_screen()
+
+def reset_save():
+    try:
+        game.reset_save()
+        supervisor.reload()
+    except OSError:
+        tab.create_popup('Can\'t reset save: you pressed A while booting and launched in USB mode')
 
 @tab_update
 def update_settings_tab():
+    if tab_locked: return
     tab[0].text = f'Theme: {theme_names[game.theme_index]}'
     tab[2].text = f'Notation: {["Scientific","Standard","Mixed scientific"][game.notation]}'
 
@@ -660,11 +678,9 @@ def disable_screen():
 
 def save():
     try:
-        storage.remount('/', readonly=False)
         game.save()
-        storage.remount('/', readonly=True)
-    except RuntimeError:
-        print('USB enabled, save skipped')
+    except OSError:
+        tab.create_popup('Can\'t save: you pressed A while booting and launched in USB mode')
 
 # Accelerometer part
 
@@ -728,7 +744,6 @@ while True:
 
     update_buttons()
     if True in buttons:
-        print(mem_alloc())
         last_used = time.monotonic()
         if display == None:
             buttons = [False]*6

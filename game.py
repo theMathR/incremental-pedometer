@@ -204,37 +204,37 @@ ALL = [
 
 effects = [1]*10
 
+VARIABLES = [
+    'muscles','money_upgrades','money_gained','energy_orpheus',
+    'money_upgrades_autobuyers','cereal_bar_autobuyers','apple_autobuyers',
+    'money_upgrades_autobuyer_price','cereal_bar_autobuyer_price','apple_autobuyer_price',
+    'money_upgrades_autobuyers_on',
+    'sacrifice_price',
+    'energy','energy_orpheus',
+    'training_mode_unlocked',
+    'training_mode',
+    'cereal_bar_price',
+    'apple_price',
+    'nb_orpheus','item_price','foot_price'
+]
+
 with open('save.json','r') as save_file:
-    
-    muscles=money_upgrades=money_gained=energy_orpheus=0.0
-    money_upgrades_autobuyers=cereal_bar_autobuyers=apple_autobuyers=0.0
-    money_upgrades_autobuyer_price,cereal_bar_autobuyer_price,apple_autobuyer_price=1000.0,1000.0,100000.0
-    money_upgrades_autobuyers_on = True
-    sacrifice_price=123456789.0
-    energy = energy_orpheus = 100.0
-    training_mode_unlocked = False
-    training_mode = False
-    cereal_bar_price = 500
-    apple_price = 1000
-    nb_orpheus=10
     
     save = json.load(save_file)
 
+    for n in VARIABLES:
+        exec(n + ' = save["'+n+'"]')
+    
     steps = save['steps']
     total_steps = save['total_steps']
 
     money = save['money']
 
     name = save['name']
-    
-    item_price = 500
-    
-    #money_step_upgrades = save['money_step_upgrades']
-    
-    #energy = save['energy']
+    if name == '00000':
+        name = ''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(5)])
 
     feet = save['feet']
-    foot_price=1000.0
 
     # Contain index numbers to the shoes/socks in the previous lists
     shoes_equipped = save['shoes_equipped']
@@ -257,7 +257,6 @@ with open('save.json','r') as save_file:
 
 def step():
     global money, energy, energy_orpheus, steps, total_steps, money_gained, effects
-        
     # Count steps
     steps += 1
     total_steps += 1
@@ -270,8 +269,6 @@ def step():
     
     # Get money
     money_gained = (1+money_upgrades * effects[4] * (energy/100)**(1/4)) * (1 + nb_orpheus * (energy_orpheus/100)**(1/8))
-    print(effects)
-    print(money_gained)
     money += money_gained * effects[0]
     money *= 1+effects[7]/5e4
     energy -= ((1+money_upgrades/200)/5) * (1.5/effects[8] if training_mode else 1) * effects[1]
@@ -479,8 +476,15 @@ def bytes_to_item(bytes):
     ]
     return item
 
+def reset_save():
+    with open('default_save.json') as default_save, open('save.json', 'w') as save_file:
+        save_json = json.load(default_save)
+        save_json['name'] = name
+        save_json['theme'] = theme_index
+        json.dump(save_json, save_file)
+            
 def save():
-    save = {
+    save_json = {
         'steps': steps,
         'total_steps': total_steps,
         'money': money,
@@ -492,14 +496,14 @@ def save():
             {
                 'type': s.i,
                 'level': s.level,
-                'prevous_owners': s.prevous_owners,
+                'previous_owners': s.previous_owners,
             }
         for s in shoes],
         'socks': [
             {
                 'type': s.i,
                 'level': s.level,
-                'prevous_owners': s.prevous_owners,
+                'previous_owners': s.previous_owners,
             }
         for s in socks],
         'bears': bears,
@@ -507,9 +511,11 @@ def save():
         'theme': theme_index,
         'name': name
     }
+    for v in VARIABLES:
+        save_json[v] = eval(v)
     with open('save.json', 'w') as save_file:
-        json.dump(save, save_file)
-
+        json.dump(save_json, save_file)
+            
 # Convert float to str depending on the notation
 BEGIN = ['M','B','T','Qa','Qi','Sx','Sp','Oc','No']
 UNITS = ['', 'Un', 'Du', 'Tr','Qa','Qi','Sx','Sp','Oc','No']
